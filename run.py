@@ -1,4 +1,5 @@
 from flask import Flask, flash, render_template, request, redirect, url_for, session, send_file
+from utils import exponential_effectiveness
 from werkzeug.utils import secure_filename
 from matplotlib.figure import Figure
 from scipy.optimize import curve_fit
@@ -7,11 +8,6 @@ from io import BytesIO
 from snap7 import util
 import pandas as pd
 import numpy as np
-import requests
-import base64
-import random
-import snap7
-import flask
 import json
 import os
 
@@ -76,8 +72,8 @@ def rapor():
         
         return graphJSON
         
-    def func(x, m, u):
-        return m * (1 - np.exp(-1 * u * x))
+    #def func(x, m, u):
+    #    return m * (1 - np.exp(-1 * u * x))
 
     def pareto_frontier_B_b(p, a, m, u, T):
         tmin = np.log((a * p + 1) / (1 - p)) / (m * (1 + a))
@@ -90,7 +86,6 @@ def rapor():
 
     graphJSON = {}
 
-    #filename = session['messages']
     df = pd.read_pickle("./df.pickle")
     
     df = df.dropna()
@@ -102,7 +97,7 @@ def rapor():
     cum_reach_android = np.array(df['Cumulative Reach'])
     df['Inferred'] = 'Ground Truth'
         
-    popt, pcov = curve_fit(func, cum_ad_spend_android, cum_reach_android)
+    popt, _ = curve_fit(exponential_effectiveness, cum_ad_spend_android, cum_reach_android)
 
     [m, u] = popt
     a = 2
@@ -118,39 +113,37 @@ def rapor():
     graphJSON = plot_px(df)
     graphJSON2 = plot_pareto(pareto_df)    
     
-    if request.method == 'POST' and 'beginningdate' in request.form and 'enddate' in request.form and 'Malzeme' in request.form:
-        if request.form['beginningdate'] and request.form['enddate']:
-            df['Malzeme Kodu'] = [int(float(x)) for x in df['Malzeme Kodu']]                
-            malz1 = df[df['Malzeme Kodu'] == int(request.form['Malzeme'])]
-            
-            beginningdate = pd.to_datetime(request.form['beginningdate'])
-            enddate = pd.to_datetime(request.form['enddate'])
-            malz1 = malz1[malz1['Kayıdın Eklenme Zamanı'] > beginningdate]
-            malz1 = malz1[malz1['Kayıdın Eklenme Zamanı'] < enddate]
-                                  
-            malz1 = malz1[malz1['Ölçülen Ağırlık'] < malz1['Ölçülen Ağırlık'].median() * 1.2] #ekstrem deger filtreleme
-            malz1 = malz1[malz1['Ölçülen Ağırlık'] > malz1['Ölçülen Ağırlık'].median() * 0.8]
-            
-            graphJSON, graphJSON2, graphJSON3 = plot_px(malz1)
-            flash('Seçilen malzeme: ' + str(int(request.form['Malzeme'])) + '\n')
-            if len(pd.unique(malz1['Ağırlık Alt Limit'])) > 1:
-                flash('Birden fazla limit tespit edildi! En son değer kullanılıyor.')
-        else:        
-            df['Malzeme Kodu'] = [int(float(x)) for x in df['Malzeme Kodu']]                      
-            malz1 = df[df['Malzeme Kodu'] == int(request.form['Malzeme'])]
-                                
-            malz1 = malz1[malz1['Ölçülen Ağırlık'] < malz1['Ölçülen Ağırlık'].median() * 1.2] #ekstrem deger filtreleme
-            malz1 = malz1[malz1['Ölçülen Ağırlık'] > malz1['Ölçülen Ağırlık'].median() * 0.8]
-            
-            graphJSON, graphJSON2, graphJSON3 = plot_px(malz1)
-            flash('Seçilen malzeme: ' + str(int(request.form['Malzeme'])) + '\n')
-            if len(pd.unique(malz1['Ağırlık Alt Limit'])) > 1:
-                flash('Birden fazla limit tespit edildi! En son değer kullanılıyor.')
+    #if request.method == 'POST' and 'beginningdate' in request.form and 'enddate' in request.form and 'Malzeme' in request.form:
+    #    if request.form['beginningdate'] and request.form['enddate']:
                 
-    elif request.method == 'POST':
-        flash('Lütfen formu doldurun')
+    #elif request.method == 'POST':
+    #    flash('Lütfen formu doldurun')
     
     return render_template('rapor.html', graphJSON=graphJSON, graphJSON2=graphJSON2)
+
+@app.route('/kampanya.html', methods =['GET', 'POST'])
+def kampanya():
+    day = request.args.get('day')
+    b = request.args.get('b')
+    t = request.args.get('t')
+    bid = request.args.get('bid')
+    p = request.args.get('p')
+
+    if day == "0":
+        kampanya_df = pd.DataFrame({'Day': int(day), 'B': float(b), 'T': int(t), 'Bid': float(bid), 'P': float(p)}, index=[0])
+        kampanya_df.to_pickle("./kampanya_df.pickle") #overwrite
+
+    kampanya_df = pd.read_pickle("./kampanya_df.pickle")
+
+    if request.method == 'POST' and 'Dün Harcanılan Para' in request.form and 'Dün Alınan Sonuç' in request.form:
+        
+        b = kampanya_df.iloc[-1] - request.form['Dün Harcanılan Para'] #butce guncelle
+        
+        
+    elif request.method == 'POST':
+        flash('Lütfen formu doldurun')
+
+    return render_template('kampanya.html')
     
 if __name__ == "__main__":
     app.run(debug=True)

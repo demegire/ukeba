@@ -1,0 +1,37 @@
+<!doctype html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+	
+    <head>
+        <meta charset="UTF-8">
+        <title>Reklam Kampanyası</title>
+        <link rel="stylesheet" href="../static/style.css">
+		<link href="https://unpkg.com/gridjs/dist/theme/mermaid.min.css" rel="stylesheet" />
+		<link rel="shortcut icon" href="#" />
+    </head>
+
+
+	 <body>
+	 	<div class="registercontent" align="center">
+			<div class="registertop">
+				<h1>Reklam Kampanyası</h1>
+	  		</div>
+			<br></br>
+			<b></b>
+			<br></br>
+			<p><b><a href=homepage.html>Anasayfa</a></b></p>
+			<br>			
+			
+			<div class="registerbottom">
+				<form action="{{ url_for('kampanya')}}" method="post" autocomplete="off">
+                <label for="Dün Harcanılan Para">Dün Harcanılan Para</label>
+                <input type="text" id="Dün Harcanılan Para" name="Dün Harcanılan Para"><br><br>
+                <label for="Dün Alınan Sonuç">Dün Alınan Sonuç</label>
+                <input type="text" id="Dün Alınan Sonuç" name="Dün Alınan Sonuç"><br><br>
+				<input type="submit" class="btn" value="Submit"></br></br>			
+				
+				</form>
+			</div>
+			
+		</div>
+</html>
