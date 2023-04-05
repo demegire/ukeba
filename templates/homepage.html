@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<title>Homepage</title>
+<meta charset="utf-8">
+<meta name="homepage" content="width=device-width, initial-scale=1">
+<link rel="shortcut icon" href="#" />
+<style>
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  font-family: Arial, Helvetica, sans-serif;
+  padding: 0;
+  margin: 0;
+  
+
+}
+
+/* Style the header */
+header {
+  background-color: #9d0208;
+  padding: 20px;
+  text-align: center;
+  font-size: 35px;
+  color: white;
+}
+
+/* Create two columns/boxes that floats next to each other */
+nav {
+  float: left;
+  width: 30%;
+  height: 100vh;
+  //height: 1500px; /* only for demonstration, should be removed */
+  background: #8d99ae;
+  padding: 20px;
+}
+
+/* Style the list inside the menu */
+nav ul {
+  list-style-type: none;
+  padding: 0;
+}
+
+article {
+  float: left;
+  padding: 20px;
+  width: 70%;
+  background-color: #edf2f4;
+  //height: 1500px; /* only for demonstration, should be removed */
+}
+
+/* Clear floats after the columns */
+section::after {
+  content: "";
+  display: table;
+  clear: both;
+}
+
+.content {
+	display: flex;
+	flex: 1;
+	flex-direction: column:
+
+}
+
+/* Responsive layout - makes the two columns/boxes stack on top of each other instead of next to each other, on small screens */
+@media (max-width: 600px) {
+  nav, article {
+    width: 100%;
+    height: 100%;
+  }
+}
+</style>
+</head>
+<body>
+	<header>
+		<h2>The Game Circle Karar Destek Sistemi</h2>
+	</header>
+
+	<section class="content">
+	<nav>
+			<ul>
+			<li><a href=yukle.html>Rapor Yükle</a>
+			</ul>
+	</nav>
+  
+  <article>
+    <h1>Çoklu Platform Bütçe-Teklif Karar Destek Sistemi</h1>
+    <p>Bu anasayfa üzerinden başka sayfalara ulaşabilirsiniz.</p>
+	<br></br>
+    <p>
+		<ul>
+			<li><strong>Rapor Yükle:</strong> Facebook Business Raporu yükleyerek Facebook için teklif stratejisi oluşturmanızı sağlar.</li>
+
+	</p>
+  </article>
+</section>
+
+</body>
+</html>
+

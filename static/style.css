@@ -1,0 +1,141 @@
+/*Store this code in 'style.css' file inside the 'static' folder*/
+ 
+.row {
+  display: flex;
+}
+
+.column {
+  flex: 50%;
+} 
+ 
+.registercontent{
+    margin: 35px;
+    height: auto;
+    background-color: #edf2f4; 
+    border-radius: 10px;
+}
+  
+.registertop{
+    padding: 35px;
+	text-align: center;
+	font-size: 20px;
+    background-color: #9d0208; 
+    color: #ffffff;
+}
+  
+.textbox{
+    padding: 10px 60px;
+    background-color: #8d99ae; 
+    border-radius: 10px;
+}
+  
+::placeholder {
+    color: #FFFFFF;
+    opacity: 1;
+    font-style: oblique;
+    font-weight: bold;
+}
+  
+.btn {
+    padding: 10px 40px;
+    background-color: #9d0208; 
+    color: #FFFFFF;
+    font-style: oblique;
+    font-weight: bold;
+    border-radius: 10px;
+}
+  
+.worddark{
+    color: #009933;
+    font-style: oblique;
+    font-weight: bold;
+}
+  
+.wordlight{
+    color: #FFFFFF;
+    font-style: oblique;
+    font-weight: bold;
+}
+  
+*{
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    list-style: none;
+    text-decoration: none;
+    font-family: 'Josefin Sans', sans-serif;
+}
+  
+.one{
+    display: flex;
+    position: relative;
+}
+  
+.one .two{
+     width: 225px;
+    height: 100%;
+    background: #009933;
+    padding: 30px 0px;
+    position: fixed;
+}
+  
+.one .two h1{
+    color: #fff;
+    text-transform: uppercase;
+    text-align: center;
+    margin-bottom: 30px;
+    font-style: oblique;
+    font-weight: bold;
+}
+          
+.one .two h2{
+    color: #fff;
+    text-align: center;
+}
+          
+.one .two .active{
+     background: #0a8032;
+}
+  
+.one .two ul li{
+    text-align: center;
+    padding: 15px;
+    border-bottom: 0.1px solid white;
+    border-top: 0.1px solid white;
+}    
+  
+.one .two ul li a{
+    color: #ffffff;
+    display: block;
+}
+  
+.one .two ul li a .side{
+    width: 25px;
+    align:center;
+}
+  
+.one .content{
+    width: 100%;
+    margin-left: 200px;
+}
+  
+.one .content .topbar{
+    text-align: center;
+    padding: 20px;
+    background: #00b33c;
+    color: white;
+}
+          
+.one .content .contentbar{
+    margin: auto;
+}
+  
+.one .content .contentbar h1{
+    color: #11a844;
+    text-align: center;
+    font-style: oblique;
+    font-weight: bold;
+	
+.p {
+  margin: 35px;
+}
