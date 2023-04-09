@@ -107,18 +107,12 @@ def rapor():
     pareto_df = pd.DataFrame({'P': pareto_array[:, 0], 'T': pareto_array[:, 1], 'B': pareto_array[:, 2], 'Bid': pareto_array[:, 3]})
     pareto_df = pareto_df.dropna()
     
-    for spend, reach in zip(cum_ad_spend_android, func(cum_ad_spend_android, *popt)):
+    for spend, reach in zip(cum_ad_spend_android, exponential_effectiveness(cum_ad_spend_android, *popt)):
         df = df.append({'Cumulative Spent': spend, 'Cumulative Reach': reach, 'Inferred': 'Fit'}, ignore_index = True)
     
     graphJSON = plot_px(df)
     graphJSON2 = plot_pareto(pareto_df)    
-    
-    #if request.method == 'POST' and 'beginningdate' in request.form and 'enddate' in request.form and 'Malzeme' in request.form:
-    #    if request.form['beginningdate'] and request.form['enddate']:
-                
-    #elif request.method == 'POST':
-    #    flash('Lütfen formu doldurun')
-    
+
     return render_template('rapor.html', graphJSON=graphJSON, graphJSON2=graphJSON2)
 
 @app.route('/kampanya.html', methods =['GET', 'POST'])
@@ -128,16 +122,33 @@ def kampanya():
     t = request.args.get('t')
     bid = request.args.get('bid')
     p = request.args.get('p')
+    m = request.args.get('m')
+    u = request.args.get('u')
+    n = 4
 
-    if day == "0":
-        kampanya_df = pd.DataFrame({'Day': int(day), 'B': float(b), 'T': int(t), 'Bid': float(bid), 'P': float(p)}, index=[0])
-        kampanya_df.to_pickle("./kampanya_df.pickle") #overwrite
+    if day == "1":
+        df = pd.read_pickle('./df.pickle')
+        df = df.dropna()
+        df = df[df['Campaign name'].str.contains('Android')] # Android'e ozel olmamali
+        df = df.sort_values(by=['Day'])
+        df['Cumulative Spent'] = df['Amount spent (USD)'].cumsum()
+        df['Cumulative Reach'] = df['Reach'].cumsum() / 500000 # Audience size nasil belirleniyor
+
+        for i in range(n):
+            # Son n gunu kampanya_df ye ekle df['Amount spent (USD)'] df['Reach']
+
+        #kampanya_df = pd.DataFrame({'Day': int(day), 'B': float(b), 'T': int(t), 'Bid': float(bid), 'P': float(p), 'M': float(m), 'U':float(u)}, index=[0])
+        kampanya_df.to_pickle("./kampanya_df.pickle") # Yeni kampanya için overwrite
 
     kampanya_df = pd.read_pickle("./kampanya_df.pickle")
 
     if request.method == 'POST' and 'Dün Harcanılan Para' in request.form and 'Dün Alınan Sonuç' in request.form:
         
-        b = kampanya_df.iloc[-1] - request.form['Dün Harcanılan Para'] #butce guncelle
+        total_effectiveness = 0 # Step 1
+        for i in range(n): 
+            total_effectiveness += exponential_effectiveness(kampanya_df.iloc[-1 * (1 + i)['Bid']]) # DF de eski veri olmalı
+
+        b = kampanya_df.iloc[-1] - request.form['Dün Harcanılan Para'] # Step 2
         
         
     elif request.method == 'POST':
