@@ -16,33 +16,14 @@
 			<div class="registertop">
 				<h1>Teklif Stratejisi Sayfası</h1>
 	  		</div>
-			<br></br>
-			
-			{% with messages = get_flashed_messages() %}
-			  {% if messages %}
-				<ul class=flashes>
-				{% for message in messages %}
-				  <li>{{ message }}</li>
-				{% endfor %}
-				</ul>
-			  {% endif %}
-			{% endwith %}
-			<br></br>
+			<br>
 			<p><b><a href=homepage.html>Anasayfa</a></b></p>
 			<br>			
 			
-			<div class="registerbottom">
-				<form action="{{ url_for('rapor')}}" method="post" autocomplete="off">
-
-				<input type="submit" class="btn" value="Submit"></br></br>			
-				
-				</form>
-			</div>
-			
 		</div>
 
-	  <div id='chart' class='chart'”></div>
-	  <div id='chart2' class='chart'”></div>
+	  <div id='chart' class='chart'></div>
+	  <div id='chart2' class='chart'></div>
 	</body><script src='https://cdn.plot.ly/plotly-latest.min.js'></script>
 	<script type='text/javascript'>
 	var graphs = {{graphJSON | safe}};
@@ -57,7 +38,7 @@
 		const t = data.points[0].y;
 		const day = "1";
 		const m = {{m | safe}};
-		const 
+		const u = {{u | safe}};
 
 		window.location.href = `http://localhost:5000/kampanya.html?t=${t}&b=${b}&bid=${bid}&p=${p}&day=${day}&m=${m}&u=${u}`;
 

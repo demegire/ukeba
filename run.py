@@ -13,7 +13,7 @@ import os
 import plotly
 import plotly.express as px
 
-from constants import WORD_OF_MOUTH, INITIAL_EXPOSURE
+from constants import WORD_OF_MOUTH, INITIAL_EXPOSURE, ONLINE_LEARNING_N
 
 UPLOAD_FOLDER = 'uploads'
 ALLOWED_EXTENSIONS = {'csv'}
@@ -111,7 +111,7 @@ def rapor():
     graphJSON = plot_px(df)
     graphJSON2 = plot_pareto(pareto_df)    
 
-    return render_template('rapor.html', graphJSON=graphJSON, graphJSON2=graphJSON2)
+    return render_template('rapor.html', graphJSON=graphJSON, graphJSON2=graphJSON2, m=m, u=u)
 
 @app.route('/kampanya.html', methods =['GET', 'POST'])
 def kampanya():
@@ -122,7 +122,6 @@ def kampanya():
     p = request.args.get('p')
     m = request.args.get('m')
     u = request.args.get('u')
-    n = 4
 
     if day == "1":
         df = pd.read_pickle('./df.pickle')
@@ -139,22 +138,23 @@ def kampanya():
         kampanya_df = kampanya_df.append(pd.DataFrame({'Day': int(day), 'B': float(b), 'T': int(t), 'Bid': float(bid), 'P': float(p), 'M': float(m), 'U':float(u), 'Reach':0},  index=[0]), ignore_index=True)
         df2 = df.copy()
         df2.sort_values(by='Day', ascending=False)
-        df2 = df2.tail(n)
-        for i in range(n):
+        df2 = df2.tail(ONLINE_LEARNING_N)
+        for i in range(ONLINE_LEARNING_N):
             new_entry = pd.DataFrame({'Day': df2['Day'][i], 'B': df2['Amount spent (USD)'][i], 'T': [0], 'Bid': [0], 'P': [0], 'M': [0], 'U': [0], 'Reach': df2['Reach'][i]})
             kampanya_df = kampanya_df.append(new_entry, ignore_index=True)
         kampanya_df.to_pickle("./kampanya_df.pickle") # Yeni kampanya için overwrite
              
     kampanya_df = pd.read_pickle("./kampanya_df.pickle")
+    print(kampanya_df)
 
     if request.method == 'POST' and 'Dün Harcanılan Para' in request.form and 'Dün Alınan Sonuç' in request.form:
         
         total_effectiveness_arr = [] # Step 1
-        for j in range(n): # Son n tane sample icin icin g_star hesapla
+        #for j in range(n): # Son n tane sample icin icin g_star hesapla
 
-            total_effectiveness += exponential_effectiveness(kampanya_df.iloc[-1 * (1 + j)['Bid']], kampanya_df.iloc[-1]['M'], kampanya_df.iloc[-1]['U']) # Son n veriyi cek
+            #total_effectiveness += exponential_effectiveness(kampanya_df.iloc[-1 * (1 + j)['Bid']], kampanya_df.iloc[-1]['M'], kampanya_df.iloc[-1]['U']) # Son n veriyi cek
 
-        g_star = g_16(WORD_OF_MOUTH, INITIAL_EXPOSURE, total_effectiveness)
+        #g_star = g_16(WORD_OF_MOUTH, INITIAL_EXPOSURE, total_effectiveness)
 
 
         b = kampanya_df.iloc[-1] - request.form['Dün Harcanılan Para'] # Step 2
