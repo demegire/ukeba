@@ -5,7 +5,7 @@ from matplotlib.figure import Figure
 from scipy.optimize import curve_fit
 import plotly.figure_factory as ff
 from io import BytesIO
-from snap7 import util
+#from snap7 import util
 import pandas as pd
 import numpy as np
 import json
@@ -133,13 +133,20 @@ def kampanya():
         df = df.sort_values(by=['Day'])
         df['Cumulative Spent'] = df['Amount spent (USD)'].cumsum()
         df['Cumulative Reach'] = df['Reach'].cumsum() / 500000 # Audience size nasil belirleniyor
-
-        for i in range(n):
-            # Son n gunu kampanya_df ye ekle df['Amount spent (USD)'] df['Reach']
+        
+        # Son n gunu kampanya_df ye ekle df['Amount spent (USD)'] df['Reach']            
 
         #kampanya_df = pd.DataFrame({'Day': int(day), 'B': float(b), 'T': int(t), 'Bid': float(bid), 'P': float(p), 'M': float(m), 'U':float(u)}, index=[0])
+        kampanya_df = pd.DataFrame(columns=['Day', 'B', 'T', 'Bid', 'P', 'M', 'U', 'Reach'])
+        kampanya_df = kampanya_df.append(pd.DataFrame({'Day': int(day), 'B': float(b), 'T': int(t), 'Bid': float(bid), 'P': float(p), 'M': float(m), 'U':float(u), 'Reach':0},  index=[0]), ignore_index=True)
         kampanya_df.to_pickle("./kampanya_df.pickle") # Yeni kampanya için overwrite
-
+        df2 = df.copy()
+        df2.sort_values(by='Day', ascending=False)
+        df2 = df2.tail(n)
+        for i in range(n):
+            new_entry = pd.DataFrame({'Day': df2['Day'][i], 'B': df2['Amount spent (USD)'][i], 'T': [0], 'Bid': [0], 'P': [0], 'M': [0], 'U': [0], 'Reach': df2['Reach'][i]})
+            kampanya_df = kampanya_df.append(new_entry, ignore_index=True)
+                
     kampanya_df = pd.read_pickle("./kampanya_df.pickle")
 
     if request.method == 'POST' and 'Dün Harcanılan Para' in request.form and 'Dün Alınan Sonuç' in request.form:
