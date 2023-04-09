@@ -148,16 +148,18 @@ def kampanya():
     print(kampanya_df)
 
     if request.method == 'POST' and 'Dün Harcanılan Para' in request.form and 'Dün Alınan Sonuç' in request.form:
+
+        #kampanya_df ye ekle
         
-        total_effectiveness_arr = [] # Step 1
-        #for j in range(n): # Son n tane sample icin icin g_star hesapla
-
-            #total_effectiveness += exponential_effectiveness(kampanya_df.iloc[-1 * (1 + j)['Bid']], kampanya_df.iloc[-1]['M'], kampanya_df.iloc[-1]['U']) # Son n veriyi cek
-
-        #g_star = g_16(WORD_OF_MOUTH, INITIAL_EXPOSURE, total_effectiveness)
-
+        g_star_arr = [] # Step 1
+        for j in range(ONLINE_LEARNING_N): # Son n tane sample icin icin g_star hesapla
+            total_effectiveness = 0
+            for i in range(ONLINE_LEARNING_N):
+                total_effectiveness += exponential_effectiveness(kampanya_df.iloc[-1 * (1 + j + i)]['Bid'], kampanya_df.iloc[-1]['M'], kampanya_df.iloc[-1]['U']) # Son n veriyi cek
+            g_star_arr.append(g_16(WORD_OF_MOUTH, INITIAL_EXPOSURE, total_effectiveness))
 
         b = kampanya_df.iloc[-1] - request.form['Dün Harcanılan Para'] # Step 2
+        print(g_star_arr)
         
         
     elif request.method == 'POST':
