@@ -55,9 +55,11 @@
 		const p = data.points[0].data.legendgroup;
 		const b = data.points[0].x;
 		const t = data.points[0].y;
-		const day = "0";
+		const day = "1";
+		const m = {{m | safe}};
+		const 
 
-		window.location.href = `http://localhost:5000/kampanya.html?t=${t}&b=${b}&bid=${bid}&p=${p}&day=${day}`;
+		window.location.href = `http://localhost:5000/kampanya.html?t=${t}&b=${b}&bid=${bid}&p=${p}&day=${day}&m=${m}&u=${u}`;
 
 	});
 

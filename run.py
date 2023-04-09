@@ -4,6 +4,7 @@ from werkzeug.utils import secure_filename
 from matplotlib.figure import Figure
 from scipy.optimize import curve_fit
 from io import BytesIO
+#from snap7 import util
 import pandas as pd
 import numpy as np
 import json
@@ -130,23 +131,31 @@ def kampanya():
         df = df.sort_values(by=['Day'])
         df['Cumulative Spent'] = df['Amount spent (USD)'].cumsum()
         df['Cumulative Reach'] = df['Reach'].cumsum() / 500000 # Audience size nasil belirleniyor
-
-        for i in range(n):
-            # Son n gunu kampanya_df ye ekle df['Amount spent (USD)'] df['Reach']
+        
+        # Son n gunu kampanya_df ye ekle df['Amount spent (USD)'] df['Reach']            
 
         #kampanya_df = pd.DataFrame({'Day': int(day), 'B': float(b), 'T': int(t), 'Bid': float(bid), 'P': float(p), 'M': float(m), 'U':float(u)}, index=[0])
+        kampanya_df = pd.DataFrame(columns=['Day', 'B', 'T', 'Bid', 'P', 'M', 'U', 'Reach'])
+        kampanya_df = kampanya_df.append(pd.DataFrame({'Day': int(day), 'B': float(b), 'T': int(t), 'Bid': float(bid), 'P': float(p), 'M': float(m), 'U':float(u), 'Reach':0},  index=[0]), ignore_index=True)
+        df2 = df.copy()
+        df2.sort_values(by='Day', ascending=False)
+        df2 = df2.tail(n)
+        for i in range(n):
+            new_entry = pd.DataFrame({'Day': df2['Day'][i], 'B': df2['Amount spent (USD)'][i], 'T': [0], 'Bid': [0], 'P': [0], 'M': [0], 'U': [0], 'Reach': df2['Reach'][i]})
+            kampanya_df = kampanya_df.append(new_entry, ignore_index=True)
         kampanya_df.to_pickle("./kampanya_df.pickle") # Yeni kampanya için overwrite
-
+             
     kampanya_df = pd.read_pickle("./kampanya_df.pickle")
 
     if request.method == 'POST' and 'Dün Harcanılan Para' in request.form and 'Dün Alınan Sonuç' in request.form:
         
-        total_effectiveness = 0 # Step 1
-        for i in range(n): 
-            total_effectiveness += exponential_effectiveness(kampanya_df.iloc[-1 * (1 + i)['Bid']]) # Son n veriyi cek
+        total_effectiveness_arr = [] # Step 1
+        for j in range(n): # Son n tane sample icin icin g_star hesapla
+
+            total_effectiveness += exponential_effectiveness(kampanya_df.iloc[-1 * (1 + j)['Bid']], kampanya_df.iloc[-1]['M'], kampanya_df.iloc[-1]['U']) # Son n veriyi cek
 
         g_star = g_16(WORD_OF_MOUTH, INITIAL_EXPOSURE, total_effectiveness)
-        
+
 
         b = kampanya_df.iloc[-1] - request.form['Dün Harcanılan Para'] # Step 2
         
