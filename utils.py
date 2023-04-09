@@ -56,4 +56,7 @@ def b_calc(p, a, ms, T, ltv, n, disc):
     b1_array = np.column_stack((b1_a, ltv*n*np.linspace(0,1,disc)))  
     b_par = [old_pareto_frontier(p,a,ms,t) for t in np.arange(0, T, 0.1)]
     return b1_a, b1_array, b_par
+
+def g_16(a, q, f_integral):
+    return ((a + 1) * (1 - q)) / ((1 + a * q) * np.exp((1 + a) * (f_integral)) + a * (1 - q))
     

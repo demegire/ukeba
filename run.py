@@ -1,11 +1,9 @@
 from flask import Flask, flash, render_template, request, redirect, url_for, session, send_file
-from utils import exponential_effectiveness
+from utils import exponential_effectiveness, g_16
 from werkzeug.utils import secure_filename
 from matplotlib.figure import Figure
 from scipy.optimize import curve_fit
-import plotly.figure_factory as ff
 from io import BytesIO
-from snap7 import util
 import pandas as pd
 import numpy as np
 import json
@@ -13,6 +11,8 @@ import os
 
 import plotly
 import plotly.express as px
+
+from constants import WORD_OF_MOUTH, INITIAL_EXPOSURE
 
 UPLOAD_FOLDER = 'uploads'
 ALLOWED_EXTENSIONS = {'csv'}
@@ -71,9 +71,6 @@ def rapor():
         graphJSON = json.dumps(fig, cls=plotly.utils.PlotlyJSONEncoder)
         
         return graphJSON
-        
-    #def func(x, m, u):
-    #    return m * (1 - np.exp(-1 * u * x))
 
     def pareto_frontier_B_b(p, a, m, u, T):
         tmin = np.log((a * p + 1) / (1 - p)) / (m * (1 + a))
@@ -146,7 +143,10 @@ def kampanya():
         
         total_effectiveness = 0 # Step 1
         for i in range(n): 
-            total_effectiveness += exponential_effectiveness(kampanya_df.iloc[-1 * (1 + i)['Bid']]) # DF de eski veri olmalı
+            total_effectiveness += exponential_effectiveness(kampanya_df.iloc[-1 * (1 + i)['Bid']]) # Son n veriyi cek
+
+        g_star = g_16(WORD_OF_MOUTH, INITIAL_EXPOSURE, total_effectiveness)
+        
 
         b = kampanya_df.iloc[-1] - request.form['Dün Harcanılan Para'] # Step 2
         
