@@ -3,6 +3,7 @@ from utils import exponential_effectiveness, g_16
 from werkzeug.utils import secure_filename
 from matplotlib.figure import Figure
 from scipy.optimize import curve_fit
+import scipy
 from io import BytesIO
 #from snap7 import util
 import pandas as pd
@@ -98,7 +99,8 @@ def rapor():
     popt, _ = curve_fit(exponential_effectiveness, cum_ad_spend_android, cum_reach_android)
 
     [m, u] = popt
-    pareto_array = np.array([[p, t, *pareto_frontier_B_b(p, WORD_OF_MOUTH, m, u, t)] for p in [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9] for t in np.linspace(1, 30, 30)])
+    a = 2
+    pareto_array = np.array([[p, t, *pareto_frontier_B_b(p, a, m, u, t)] for p in [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9] for t in np.linspace(1, 30, 30)])
 
 
     pareto_df = pd.DataFrame({'P': pareto_array[:, 0], 'T': pareto_array[:, 1], 'B': pareto_array[:, 2], 'Bid': pareto_array[:, 3]})
@@ -122,6 +124,9 @@ def kampanya():
     m = request.args.get('m')
     u = request.args.get('u')
 
+    print(m)
+    print(u)
+
     if day == "1":
         df = pd.read_pickle('./df.pickle')
         df = df.dropna()
@@ -144,11 +149,12 @@ def kampanya():
         kampanya_df.to_pickle("./kampanya_df.pickle") # Yeni kampanya için overwrite
              
     kampanya_df = pd.read_pickle("./kampanya_df.pickle")
-    print(kampanya_df)
 
     if request.method == 'POST' and 'Dün Harcanılan Para' in request.form and 'Dün Alınan Sonuç' in request.form:
 
         #kampanya_df ye ekle
+
+        print(kampanya_df)
         
         g_star_arr = [] # Step 1
         for j in range(ONLINE_LEARNING_N): # Son n tane sample icin icin g_star hesapla
@@ -158,9 +164,18 @@ def kampanya():
             g_star_arr.append(g_16(WORD_OF_MOUTH, INITIAL_EXPOSURE, total_effectiveness))
 
         b = kampanya_df.iloc[-1] - float(request.form['Dün Harcanılan Para']) # Step 2
-        print(g_star_arr)
         
-        
+        def step3(parameters, g_star_arr, i, n):
+            #parameters [m,u]
+            #argss[g_star_arr, i, n]
+            integral = scipy.integrate.quad(exponential_effectiveness, 0, i, args=(parameters[0], parameters[1]))
+            summation = [(g_star_arr[j] - g_16(WORD_OF_MOUTH, INITIAL_EXPOSURE, integral)) for j in range(2)] #duzelt
+            return (2 / ((ONLINE_LEARNING_N + 1) * ONLINE_LEARNING_N)) * np.sum(summation)       
+    
+
+        result = scipy.optimize.least_squares(step3, x0=np.array([kampanya_df.iloc[-1]['M'], kampanya_df.iloc[-1]['U']]), args=(g_star_arr, 5, ONLINE_LEARNING_N))
+        print(result)
+
     elif request.method == 'POST':
         flash('Lütfen formu doldurun')
 
