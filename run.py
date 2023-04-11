@@ -158,7 +158,7 @@ def kampanya():
                 total_effectiveness += exponential_effectiveness(kampanya_df.iloc[-1 * (1 + j + i)]['Bid'], kampanya_df.iloc[-1]['M'], kampanya_df.iloc[-1]['U']) # Son n veriyi cek
             g_star_arr.append(g_16(WORD_OF_MOUTH, INITIAL_EXPOSURE, total_effectiveness))
 
-        b = kampanya_df.iloc[-1] - request.form['Dün Harcanılan Para'] # Step 2
+        b = kampanya_df.iloc[-1] - float(request.form['Dün Harcanılan Para']) # Step 2
         print(g_star_arr)
         
         
