@@ -16,22 +16,44 @@
 			<div class="registertop">
 				<h1>Reklam Kampanyası</h1>
 	  		</div>
-			<br></br>
-			<b></b>
-			<br></br>
+			<br>
 			<p><b><a href=homepage.html>Anasayfa</a></b></p>
-			<br>			
-			
+			<b></b>
+			<br>
 			<div class="registerbottom">
 				<form action="{{ url_for('kampanya')}}" method="post" autocomplete="off">
-                <label for="Dün Harcanılan Para">Dün Harcanılan Para</label>
+                <label for="Dün Harcanılan Para">Önceki Gün Harcanan Para: </label>
                 <input type="text" id="Dün Harcanılan Para" name="Dün Harcanılan Para"><br><br>
-                <label for="Dün Alınan Sonuç">Dün Alınan Sonuç</label>
+                <label for="Dün Alınan Sonuç">Önceki Gün Alınan Sonuç: </label>
                 <input type="text" id="Dün Alınan Sonuç" name="Dün Alınan Sonuç"><br><br>
-				<input type="submit" class="btn" value="Submit"></br></br>			
-				
+				<input type="submit" class="btn" value="Yeni İhale Değeri Üret"></br></br>			
 				</form>
 			</div>
-			
+			{% with messages = get_flashed_messages() %}
+			{% if messages %}
+			  <ul class=flashes>
+			  {% for message in messages %}
+				<li><strong>{{ message }}</strong></li>
+			  {% endfor %}
+			  </ul>
+			{% endif %}
+		  	{% endwith %}
+			<br>
+			<div id="table"></div>
 		</div>
+		<script src="https://unpkg.com/gridjs/dist/gridjs.umd.js"></script>
+		<script>
+		
+			const tableDiv = document.getElementById('table');
+							
+			new gridjs.Grid({
+				columns: ['Gün', 'Ulaşılan Kitle (%)', 'Harcanılan Para'],
+				sort: {enabled: true, multiColumn: true},		  
+				data: {{ table_data }},
+				width: '90%'
+			}).render(tableDiv);
+		
+		</script>
+
+		<br>   </br>
 </html>

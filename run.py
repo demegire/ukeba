@@ -31,15 +31,10 @@ def allowed_file(filename):
 def default():
     return redirect("homepage.html")
     
-@app.route('/homepage.html')
+@app.route('/homepage.html', methods =['GET', 'POST'])
 def index():
-    return render_template("homepage.html")
-    
-    
-@app.route('/yukle.html', methods =['GET', 'POST'])
-def yukle():
     if request.method == 'POST':
-        # check if the post request has the file part
+    # check if the post request has the file part
         if 'file' not in request.files:
             flash('No file part')
             return redirect(request.url)
@@ -56,20 +51,19 @@ def yukle():
             df.to_pickle("./df.pickle")
             session['messages'] = filename
             return redirect('/rapor.html')
-            
-    return render_template('yukle.html')
+    return render_template("homepage.html")
     
 @app.route('/rapor.html', methods =['GET', 'POST'])
 def rapor():
 
     def plot_px(df):
-        fig = px.line(df, x='Cumulative Spent', y='Cumulative Reach', markers=True, color='Inferred', title="Reach vs Spent")
+        fig = px.line(df, x='Kümülatif Harcanan Para', y='Kümülatif Ulaşılan Kişi Sayısı', markers=True, color='Inferred', title="Harcanan Para vs Ulaşılan Kişi Sayısı")
         graphJSON = json.dumps(fig, cls=plotly.utils.PlotlyJSONEncoder)
         
         return graphJSON
 
     def plot_pareto(df):
-        fig = px.line(df, x='B', y='T', markers=True, color='P', hover_data=['Bid'], title="B vs T Pareto")
+        fig = px.line(df, x='B', y='T', markers=True, color='P', hover_data=['Bid'], title="B vs T vs P (Min B)")
         graphJSON = json.dumps(fig, cls=plotly.utils.PlotlyJSONEncoder)
         
         return graphJSON
@@ -90,10 +84,10 @@ def rapor():
     df = df.dropna()
     df = df[df['Campaign name'].str.contains('Android')]
     df = df.sort_values(by=['Day'])
-    df['Cumulative Spent'] = df['Amount spent (USD)'].cumsum()
-    df['Cumulative Reach'] = df['Reach'].cumsum() / 500000
-    cum_ad_spend_android = np.array(df['Cumulative Spent'])
-    cum_reach_android = np.array(df['Cumulative Reach'])
+    df['Kümülatif Harcanan Para'] = df['Amount spent (USD)'].cumsum()
+    df['Kümülatif Ulaşılan Kişi Sayısı'] = df['Reach'].cumsum() / 500000
+    cum_ad_spend_android = np.array(df['Kümülatif Harcanan Para'])
+    cum_reach_android = np.array(df['Kümülatif Ulaşılan Kişi Sayısı'])
     df['Inferred'] = 'Ground Truth'
         
     popt, _ = curve_fit(exponential_effectiveness, cum_ad_spend_android, cum_reach_android)
@@ -102,17 +96,16 @@ def rapor():
     a = 2
     pareto_array = np.array([[p, t, *pareto_frontier_B_b(p, a, m, u, t)] for p in [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9] for t in np.linspace(1, 30, 30)])
 
-
     pareto_df = pd.DataFrame({'P': pareto_array[:, 0], 'T': pareto_array[:, 1], 'B': pareto_array[:, 2], 'Bid': pareto_array[:, 3]})
     pareto_df = pareto_df.dropna()
     
     for spend, reach in zip(cum_ad_spend_android, exponential_effectiveness(cum_ad_spend_android, *popt)):
-        df = df.append({'Cumulative Spent': spend, 'Cumulative Reach': reach, 'Inferred': 'Fit'}, ignore_index = True)
+        df = df.append({'Kümülatif Harcanan Para': spend, 'Kümülatif Ulaşılan Kişi Sayısı': reach, 'Inferred': 'Fit'}, ignore_index = True)
     
     graphJSON = plot_px(df)
     graphJSON2 = plot_pareto(pareto_df)    
 
-    return render_template('rapor.html', graphJSON=graphJSON, graphJSON2=graphJSON2, m=m, u=u)
+    return render_template('rapor.html', graphJSON=graphJSON, graphJSON2=graphJSON2, m=m, u=u, kitle='Hedef Kitledeki Kişi Sayısı: 500000')
 
 @app.route('/kampanya.html', methods =['GET', 'POST'])
 def kampanya():
@@ -124,38 +117,31 @@ def kampanya():
     m = request.args.get('m')
     u = request.args.get('u')
 
-    print(m)
-    print(u)
-
     if day == "1":
         df = pd.read_pickle('./df.pickle')
         df = df.dropna()
         df = df[df['Campaign name'].str.contains('Android')] # Android'e ozel olmamali
         df = df.sort_values(by=['Day'])
         df['Cumulative Spent'] = df['Amount spent (USD)'].cumsum()
-        df['Cumulative Reach'] = df['Reach'].cumsum() / 500000 # Audience size nasil belirleniyor
+        df['Cumulative Reach'] = df['Reach'].cumsum() / 500000 # Audience size belirlenmeli
         
         # Son n gunu kampanya_df ye ekle df['Amount spent (USD)'] df['Reach']            
-
-        #kampanya_df = pd.DataFrame({'Day': int(day), 'B': float(b), 'T': int(t), 'Bid': float(bid), 'P': float(p), 'M': float(m), 'U':float(u)}, index=[0])
         kampanya_df = pd.DataFrame(columns=['Day', 'B', 'T', 'Bid', 'P', 'M', 'U', 'Reach'])
         df2 = df.copy()
         df2.sort_values(by='Day', ascending=False)
         df2 = df2.tail(ONLINE_LEARNING_N)
         for i in range(ONLINE_LEARNING_N):
-            new_entry = pd.DataFrame({'Day': 0, 'B': df2['Amount spent (USD)'].iloc[i], 'T': 0, 'Bid': 0, 'P': 0, 'M': 0, 'U': 0, 'Reach': df2['Reach'].iloc[i]}, index=[0])
+            new_entry = pd.DataFrame({'Day': 0, 'B': df2['Amount spent (USD)'].iloc[i], 'T': 0, 'Bid': 0, 'P': 0, 'M': 0, 'U': 0, 'Reach': df2['Reach'].iloc[i] / 500000}, index=[0])
             kampanya_df = kampanya_df.append(new_entry, ignore_index=True)
         kampanya_df = kampanya_df.append(pd.DataFrame({'Day': int(day), 'B': float(b), 'T': int(t), 'Bid': float(bid), 'P': float(p), 'M': float(m), 'U':float(u), 'Reach':0},  index=[0]), ignore_index=True)
         kampanya_df.to_pickle("./kampanya_df.pickle") # Yeni kampanya için overwrite
              
     kampanya_df = pd.read_pickle("./kampanya_df.pickle")
 
-    if request.method == 'POST' and 'Dün Harcanılan Para' in request.form and 'Dün Alınan Sonuç' in request.form:
+    yeni_bid = 0
 
-        #kampanya_df ye ekle
-
-        print(kampanya_df)
-        
+    if request.method == 'POST' and  request.form['Dün Harcanılan Para'] and request.form['Dün Alınan Sonuç']:
+        #kampanya_df ye ekle        
         g_star_arr = [] # Step 1
         for j in range(ONLINE_LEARNING_N): # Son n tane sample icin icin g_star hesapla
             total_effectiveness = 0
@@ -163,7 +149,7 @@ def kampanya():
                 total_effectiveness += exponential_effectiveness(kampanya_df.iloc[-1 * (1 + j + i)]['Bid'], kampanya_df.iloc[-1]['M'], kampanya_df.iloc[-1]['U']) # Son n veriyi cek
             g_star_arr.append(g_16(WORD_OF_MOUTH, INITIAL_EXPOSURE, total_effectiveness))
 
-        b = kampanya_df.iloc[-1] - float(request.form['Dün Harcanılan Para']) # Step 2
+        yeni_b = kampanya_df.iloc[-1] - float(request.form['Dün Harcanılan Para']) # Step 2
         
         def step3(parameters, g_star_arr, i, n):
             #parameters [m,u]
@@ -174,12 +160,14 @@ def kampanya():
     
 
         result = scipy.optimize.least_squares(step3, x0=np.array([kampanya_df.iloc[-1]['M'], kampanya_df.iloc[-1]['U']]), args=(g_star_arr, 5, ONLINE_LEARNING_N))
-        print(result)
-
+        yeni_bid = kampanya_df.iloc[-1]['Bid'] * 0.8
+        kampanya_df = kampanya_df.append(pd.DataFrame({'Day': kampanya_df.iloc[-1]['Day'] + 1, 'B': yeni_b, 'T':  kampanya_df.iloc[-1]['T'], 'Bid': yeni_bid, 'P':  kampanya_df.iloc[-1]['P'], 'M': result.x[0], 'U': result.x[1], 'Reach':kampanya_df.iloc[-1]['Reach'] + float(request.form['Dün Alınan Sonuç'])/500000}), ignore_index=True)
+        kampanya_df.to_pickle("./kampanya_df.pickle")
+        flash('Yeni İhale Değeri: ' + str(yeni_bid))
     elif request.method == 'POST':
         flash('Lütfen formu doldurun')
 
-    return render_template('kampanya.html')
+    return render_template('kampanya.html', yeni_bid=yeni_bid)
     
 if __name__ == "__main__":
     app.run(debug=True)
