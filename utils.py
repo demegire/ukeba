@@ -7,10 +7,14 @@ def pareto_frontier_B_b(p, a, m, u, T):
     tmin = np.log((a * p + 1) / (1 - p)) / (m * (1 + a))
     B = ((-T/u) * np.log(1 - (tmin/T)))
 
-    beta = u * (m - 1/((1 + a) * T) * np.log((a * p + 1)/((1 - p))))
-    bid = 1 / u * np.log(m * u / beta)
+    bid = new_bid(p, a, m, u, T)
 
     return B, bid
+
+def new_bid(p, a, m, u, T):
+    beta = u * (m - 1/((1 + a) * T) * np.log((a * p + 1)/((1 - p))))
+    bid = 1 / u * np.log(m * u / beta)
+    return bid
 
 def old_pareto_frontier(p, a, ms, T):
     tmin = np.log((a * p + 1) / (1 - p)) / (ms * (1 + a))

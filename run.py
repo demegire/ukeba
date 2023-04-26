@@ -1,5 +1,5 @@
 from flask import Flask, flash, render_template, request, redirect, url_for, session, send_file
-from utils import exponential_effectiveness, g_16
+from utils import exponential_effectiveness, g_16, new_bid
 from werkzeug.utils import secure_filename
 from matplotlib.figure import Figure
 from scipy.optimize import curve_fit
@@ -152,15 +152,14 @@ def kampanya():
         yeni_b = kampanya_df.iloc[-1] - float(request.form['Dün Harcanılan Para']) # Step 2
         
         def step3(parameters, g_star_arr, i, n):
-            #parameters [m,u]
-            #argss[g_star_arr, i, n]
             integral = scipy.integrate.quad(exponential_effectiveness, 0, i, args=(parameters[0], parameters[1]))
             summation = [(g_star_arr[j] - g_16(WORD_OF_MOUTH, INITIAL_EXPOSURE, integral)) for j in range(2)] #duzelt
             return (2 / ((ONLINE_LEARNING_N + 1) * ONLINE_LEARNING_N)) * np.sum(summation)       
     
 
         result = scipy.optimize.least_squares(step3, x0=np.array([kampanya_df.iloc[-1]['M'], kampanya_df.iloc[-1]['U']]), args=(g_star_arr, 5, ONLINE_LEARNING_N))
-        yeni_bid = kampanya_df.iloc[-1]['Bid'] * 0.8
+        yeni_bid = new_bid(kampanya_df.iloc[-1]['P'], WORD_OF_MOUTH, result.x[0], result.x[1], kampanya_df.iloc[-1]['T'])
+
         kampanya_df = kampanya_df.append(pd.DataFrame({'Day': kampanya_df.iloc[-1]['Day'] + 1, 'B': yeni_b, 'T':  kampanya_df.iloc[-1]['T'], 'Bid': yeni_bid, 'P':  kampanya_df.iloc[-1]['P'], 'M': result.x[0], 'U': result.x[1], 'Reach':kampanya_df.iloc[-1]['Reach'] + float(request.form['Dün Alınan Sonuç'])/500000}), ignore_index=True)
         kampanya_df.to_pickle("./kampanya_df.pickle")
         flash('Yeni İhale Değeri: ' + str(yeni_bid))
