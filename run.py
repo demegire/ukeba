@@ -94,7 +94,7 @@ def rapor():
     graphJSON = {}
 
     df = pd.read_pickle("./df.pickle")
-    df = df.head()
+    #df = df.head()
 
     #df = df.dropna()
     #df = df[df['Campaign name'].str.contains('Android')]
@@ -104,17 +104,15 @@ def rapor():
 
     df = df.sort_values(by=['Date'])
     df['Kümülatif Harcanan Para'] = df['Cost'].cumsum()
-    df['Kümülatif Sonuç Yüzdesi'] = df['Install'].cumsum()
+    df['Kümülatif Sonuç Yüzdesi'] = df['Install'].cumsum()  / AUDIENCE_SIZE
 
     cum_ad_spend = np.array(df['Kümülatif Harcanan Para'], dtype='f')
     cum_result = np.array(df['Kümülatif Sonuç Yüzdesi'], dtype='f')
     df['Veri Kaynağı'] = 'Gerçek'
         
-    print(repr(cum_ad_spend))
-    print(repr(cum_result))
-    popt, _ = curve_fit(exponential_effectiveness, cum_ad_spend, cum_result)
-    print(popt)
-    print(_)
+    p0 = [9.42189734e+05, 2.19703087e-03]
+    popt, _ = curve_fit(exponential_effectiveness, cum_ad_spend, cum_result, p0=p0, maxfev=5000)
+
 
     #popt = [0.014774, 0.913376, 0.632359, -0.014672]
     [m, u] = popt
