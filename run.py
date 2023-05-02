@@ -129,6 +129,170 @@ def rapor():
 
     return render_template('rapor.html', graphJSON=graphJSON, graphJSON2=graphJSON2, m=m, u=u, kitle='Hedef Kitledeki Kişi Sayısı: ' + str(AUDIENCE_SIZE))
 
+
+@app.route('/rapor_multiplatform.html', methods =['GET', 'POST'])
+def rapor_mp():
+
+    def plot_px(df):
+        fig = px.line(df, x='Kümülatif Harcanan Para', y='Kümülatif Ulaşılan Kişi Sayısı', markers=True, color='Inferred', title="Harcanan Para vs Ulaşılan Kişi Sayısı")
+        graphJSON = json.dumps(fig, cls=plotly.utils.PlotlyJSONEncoder)
+        
+        return graphJSON
+
+    def plot_pareto(df):
+        fig = px.line(df, x='B', y='T', markers=True, color='P', hover_data=['Bid'], title="B vs T vs P (Min B)")
+        graphJSON = json.dumps(fig, cls=plotly.utils.PlotlyJSONEncoder)
+        
+        return graphJSON
+
+    def pareto_frontier_B_b(p, a, m, u, T):
+        tmin = np.log((a * p + 1) / (1 - p)) / (m * (1 + a))
+        B = ((-T/u) * np.log(1 - (tmin/T)))
+
+        beta = u * (m - 1/((1 + a) * T) * np.log((a * p + 1)/((1 - p))))
+        bid = 1 / u * np.log(m * u / beta)
+
+        return B, bid
+    
+    def maximize_p1p2_sum(platform_pars_1, m_u_1, platform_pars_2, m_u_2, b_limit, T=10, sens=10):
+        max_sum = -1
+        optimal_p1 = -1
+        optimal_p2 = -1
+        opt_b1 = -1
+        opt_b2 = -1
+        
+        
+        b1_a = [pareto_frontier_B_b(p,platform_pars_1[0],m_u_1[0],m_u_1[1],T)[0] for p in np.linspace(0,1,sens)]
+        b2_a = [pareto_frontier_B_b(p,platform_pars_2[0],m_u_2[0],m_u_2[1],T)[0] for p in np.linspace(0,1,sens)]
+        
+        b1_array = np.column_stack((b1_a, np.linspace(0,1,sens)))
+        b2_array = np.column_stack((b2_a, np.linspace(0,1,sens)))
+        
+        for b1 in range(len(b1_a)):
+            for b2 in range(len(b2_a)):
+                if (b1_array[b1][0]+b2_array[b2][0])<b_limit:
+                    p1 = b1_array[b1][1]
+                    p2 = b2_array[b2][1]
+                    current_sum = p1 + p2
+                if current_sum > max_sum:
+                    max_sum = current_sum
+                    optimal_p1 = p1
+                    optimal_p2 = p2
+                    opt_b1 = b1_array[b1][0]
+                    opt_b2 = b2_array[b2][0]
+        return optimal_p1, optimal_p2, opt_b1, opt_b2, max_sum
+    
+    def maximize_n1n2_sum(platform_pars_1, m_u_1, platform_pars_2, m_u_2, b_limit, T=10, sens=10):
+        max_sum = -1
+        optimal_p1 = -1
+        optimal_p2 = -1
+        opt_b1 = -1
+        opt_b2 = -1
+        
+        b1_a = [pareto_frontier_B_b(p,platform_pars_1[0],m_u_1[0],m_u_1[1],T)[0] for p in np.linspace(0,1,sens)]
+        b2_a = [pareto_frontier_B_b(p,platform_pars_2[0],m_u_2[0],m_u_2[1],T)[0] for p in np.linspace(0,1,sens)]
+        
+        b1_array = np.column_stack((b1_a, platform_pars_1[1]*np.linspace(0,1,sens)))
+        b2_array = np.column_stack((b2_a, platform_pars_2[1]*np.linspace(0,1,sens)))
+        
+        for b1 in range(len(b1_a)):
+            for b2 in range(len(b2_a)):
+                if (b1_array[b1][0]+b2_array[b2][0])<b_limit:
+                    p1 = b1_array[b1][1]
+                    p2 = b2_array[b2][1]
+                    current_sum = p1 + p2
+                if current_sum > max_sum:
+                    max_sum = current_sum
+                    optimal_p1 = p1
+                    optimal_p2 = p2
+                    opt_b1 = b1_array[b1][0]
+                    opt_b2 = b2_array[b2][0]
+        return optimal_p1, optimal_p2, opt_b1, opt_b2, max_sum
+    
+    def maximize_ltv1ltv2_sum(platform_pars_1, m_u_1, platform_pars_2, m_u_2, b_limit, T=10, sens=10):
+        max_sum = -1
+        optimal_p1 = -1
+        optimal_p2 = -1
+        opt_b1 = -1
+        opt_b2 = -1
+        
+        b1_a = [pareto_frontier_B_b(p,platform_pars_1[0],m_u_1[0],m_u_1[1],T)[0] for p in np.linspace(0,1,sens)]
+        b2_a = [pareto_frontier_B_b(p,platform_pars_2[0],m_u_2[0],m_u_2[1],T)[0] for p in np.linspace(0,1,sens)]
+        
+        b1_array = np.column_stack((b1_a, platform_pars_2[2]*platform_pars_1[1]*np.linspace(0,1,sens)))
+        b2_array = np.column_stack((b2_a, platform_pars_2[2]*platform_pars_2[1]*np.linspace(0,1,sens)))
+        
+        for b1 in range(len(b1_a)):
+            for b2 in range(len(b2_a)):
+                if (b1_array[b1][0]+b2_array[b2][0])<b_limit:
+                    p1 = b1_array[b1][1]
+                    p2 = b2_array[b2][1]
+                    current_sum = p1 + p2
+                if current_sum > max_sum:
+                    max_sum = current_sum
+                    optimal_p1 = p1
+                    optimal_p2 = p2
+                    opt_b1 = b1_array[b1][0]
+                    opt_b2 = b2_array[b2][0]
+        return optimal_p1, optimal_p2, opt_b1, opt_b2, max_sum
+       
+
+
+    
+    # uploaded data 1
+    
+    #df1 = pd.read_pickle("./df_1.pickle")  
+    df1 = pd.read_pickle("./df.pickle") 
+    
+    df1 = df1.sort_values(by=['Date'])
+    df1['Kümülatif Harcanan Para'] = df1['Cost'].cumsum()
+    df1['Kümülatif Sonuç Yüzdesi'] = df1['Install'].cumsum()  / AUDIENCE_SIZE
+
+    cum_ad_spend_1 = np.array(df1['Kümülatif Harcanan Para'], dtype='f')
+    cum_result_1 = np.array(df1['Kümülatif Sonuç Yüzdesi'], dtype='f')
+    df1['Veri Kaynağı'] = 'Gerçek'
+        
+    p0 = [9.42189734e+05, 2.19703087e-03]
+    popt_1, _ = curve_fit(exponential_effectiveness, cum_ad_spend_1, cum_result_1, p0=p0, maxfev=5000)
+
+
+    # uploaded data 2
+    
+    #df2 = pd.read_pickle("./df_2.pickle")  
+    df2 = pd.read_pickle("./df.pickle") 
+    
+    df2 = df2.sort_values(by=['Date'])
+    df2['Kümülatif Harcanan Para'] = df2['Cost'].cumsum()
+    df2['Kümülatif Sonuç Yüzdesi'] = df2['Install'].cumsum()  / AUDIENCE_SIZE
+
+    cum_ad_spend_2 = np.array(df2['Kümülatif Harcanan Para'], dtype='f')
+    cum_result_2 = np.array(df2['Kümülatif Sonuç Yüzdesi'], dtype='f')
+    df2['Veri Kaynağı'] = 'Gerçek'
+        
+    p0 = [9.42189734e+05, 2.19703087e-03]
+    popt_2, _ = curve_fit(exponential_effectiveness, cum_ad_spend_2, cum_result_2, p0=p0, maxfev=5000)
+
+
+    # solve models for percentage, reach, ltv maximization
+
+
+    b_limit = 5000 # take as input later
+    platform_pars_1 = [0.1, 400000, 19.28] # a,n,ltv - take as input
+    m_u_1 = popt_1
+    platform_pars_2 = [2, 2500, 6.06]
+    m_u_2 = popt_2
+    
+    p_results = maximize_p1p2_sum(platform_pars_1, m_u_1, platform_pars_2, m_u_2, b_limit=b_limit)
+    reach_results = maximize_n1n2_sum(platform_pars_1, m_u_1, platform_pars_2, m_u_2, b_limit=b_limit)
+    ltv_results = maximize_ltv1ltv2_sum(platform_pars_1, m_u_1, platform_pars_2, m_u_2, b_limit=b_limit)
+    
+    results = [p_results, reach_results, ltv_results]
+    popts = [popt_1, popt_2]
+
+    return render_template('rapor.html', kitle=results)
+
+
+
 @app.route('/kampanya.html', methods =['GET', 'POST'])
 def kampanya():
     day = request.args.get('day')
