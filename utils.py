@@ -1,8 +1,9 @@
 import numpy as np
 
 def exponential_effectiveness(x, m, u):
+    #return m * (1 - np.exp(-1 * u * (x - v))) + c  # KAANS LINEAR : M*X + U
+    #return (m * x ** 3) / (1 + u * x ** 3)
     return m * (1 - np.exp(-1 * u * x))
-
 def pareto_frontier_B_b(p, a, m, u, T):
     tmin = np.log((a * p + 1) / (1 - p)) / (m * (1 + a))
     B = ((-T/u) * np.log(1 - (tmin/T)))
