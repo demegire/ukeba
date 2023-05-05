@@ -316,8 +316,8 @@ def kampanya():
         kampanya_df = pd.DataFrame(columns=['Day', 'B', 'T', 'Bid', 'P', 'M', 'U', 'Reach'])
         df2 = df.copy()
         #df2.sort_values(by='Day', ascending=False)
-        df2 = df2.tail(ONLINE_LEARNING_N)
-        for i in range(ONLINE_LEARNING_N):
+        #df2 = df2.tail(ONLINE_LEARNING_N)
+        for i in range(len(df)):
             new_entry = pd.DataFrame({'Day': 0, 'B': df2['Cost'].iloc[i], 'T': 0, 'Bid': 0, 'P': 0, 'M': 0, 'U': 0, 'Reach': df2['Install'].iloc[i] / AUDIENCE_SIZE}, index=[0])
             kampanya_df = kampanya_df.append(new_entry, ignore_index=True)
         kampanya_df = kampanya_df.append(pd.DataFrame({'Day': int(day), 'B': float(b), 'T': int(t), 'Bid': float(bid), 'P': float(p), 'M': float(m), 'U':float(u), 'Reach':0},  index=[0]), ignore_index=True)
@@ -327,27 +327,26 @@ def kampanya():
 
     yeni_bid = 0
 
+    print(kampanya_df)
+
     if request.method == 'POST' and  request.form['Dün Harcanılan Para'] and request.form['Dün Alınan Sonuç']:
+        last_index = len(kampanya_df) #i
         #kampanya_df ye ekle        
         g_star_arr = [] # Step 1
-        for j in range(ONLINE_LEARNING_N): # Son n tane sample icin icin g_star hesapla
+        for j in range(last_index - ONLINE_LEARNING_N + 1, last_index): # Son n tane sample icin icin g_star hesapla
             total_effectiveness = 0
-            for i in range(ONLINE_LEARNING_N):
-                total_effectiveness += exponential_effectiveness(kampanya_df.iloc[-1 * (1 + j + i)]['Bid'], kampanya_df.iloc[-1]['M'], kampanya_df.iloc[-1]['U']) # Son n veriyi cek
-            g_star_arr.append(g_16(WORD_OF_MOUTH, INITIAL_EXPOSURE, total_effectiveness))
-
-        yeni_b = kampanya_df.iloc[-1] - float(request.form['Dün Harcanılan Para']) # Step 2
-        
-        def step3(parameters, g_star_arr, i, n):
+            total_effectiveness += exponential_effectiveness(kampanya_df.iloc[j]['Bid'], kampanya_df.iloc[-1]['M'], kampanya_df.iloc[-1]['U']) # Son n veriyi cek
+            g_star_arr.append(g_16(WORD_OF_MOUTH, 1, total_effectiveness)) #q hikayesi
+        yeni_b = kampanya_df.iloc[-1]['B'] - float(request.form['Dün Harcanılan Para']) # Step 2
+        print(float(request.form['Dün Alınan Sonuç']))
+        def step3(parameters, g_star_arr, i):
             integral = scipy.integrate.quad(exponential_effectiveness, 0, i, args=(parameters[0], parameters[1]))
-            summation = [(g_star_arr[j] - g_16(WORD_OF_MOUTH, INITIAL_EXPOSURE, integral)) for j in range(2)] #duzelt
+            summation = [((j) * (g_star_arr[j] - g_16(WORD_OF_MOUTH, 1, integral))) for j in range(ONLINE_LEARNING_N-1)] #bircok seyi duzelt
             return (2 / ((ONLINE_LEARNING_N + 1) * ONLINE_LEARNING_N)) * np.sum(summation)       
     
-
-        result = scipy.optimize.least_squares(step3, x0=np.array([kampanya_df.iloc[-1]['M'], kampanya_df.iloc[-1]['U']]), args=(g_star_arr, 5, ONLINE_LEARNING_N))
+        result = scipy.optimize.least_squares(step3, x0=np.array([kampanya_df.iloc[-1]['M'], kampanya_df.iloc[-1]['U']]), args=(g_star_arr, last_index))
         yeni_bid = new_bid(kampanya_df.iloc[-1]['P'], WORD_OF_MOUTH, result.x[0], result.x[1], kampanya_df.iloc[-1]['T'])
-
-        kampanya_df = kampanya_df.append(pd.DataFrame({'Day': kampanya_df.iloc[-1]['Day'] + 1, 'B': yeni_b, 'T':  kampanya_df.iloc[-1]['T'], 'Bid': yeni_bid, 'P':  kampanya_df.iloc[-1]['P'], 'M': result.x[0], 'U': result.x[1], 'Reach':kampanya_df.iloc[-1]['Reach'] + float(request.form['Dün Alınan Sonuç'])/500000}), ignore_index=True)
+        kampanya_df = kampanya_df.append(pd.DataFrame({'Day': kampanya_df.iloc[-1]['Day'] + 1, 'B': yeni_b, 'T':  kampanya_df.iloc[-1]['T'], 'Bid': yeni_bid, 'P':  kampanya_df.iloc[-1]['P'], 'M': result.x[0], 'U': result.x[1], 'Reach':kampanya_df.iloc[-1]['Reach'] + float(request.form['Dün Alınan Sonuç'])/2500000}, index=[0]), ignore_index=True)        
         kampanya_df.to_pickle("./kampanya_df.pickle")
         flash('Yeni İhale Değeri: ' + str(yeni_bid))
     elif request.method == 'POST':
