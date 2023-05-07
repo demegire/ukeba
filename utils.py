@@ -12,8 +12,11 @@ def pareto_frontier_B_b(p, a, m, u, T):
 
     return B, bid
 
+def the_beta(p, a, m, u, T):
+    return u * (m - 1/((1 + a) * T) * np.log((a * p + 1)/((1 - p))))
+
 def new_bid(p, a, m, u, T):
-    beta = u * (m - 1/((1 + a) * T) * np.log((a * p + 1)/((1 - p))))
+    beta = the_beta(p, a, m, u, T)
     bid = 1 / u * np.log(m * u / beta)
     return bid
 
