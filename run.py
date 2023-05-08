@@ -11,6 +11,9 @@ import numpy as np
 import json
 import os
 
+import matplotlib.pyplot as plt
+from mpl_toolkits.mplot3d import Axes3D
+
 import plotly
 import plotly.express as px
 
@@ -102,9 +105,9 @@ def rapor():
     #df['Kümülatif Harcanan Para'] = df['Amount spent (USD)'].cumsum()
     #df['Kümülatif Sonuç Yüzdesi'] = df['Reach'].cumsum()
 
-    df = df.sort_values(by=['Date'])
-    df['Kümülatif Harcanan Para'] = df['Cost'].cumsum()
-    df['Kümülatif Sonuç Yüzdesi'] = df['Install'].cumsum()  / AUDIENCE_SIZE
+    df = df.sort_values(by=['Cost'])
+    df['Kümülatif Harcanan Para'] = df['Cost'] #df['Cost'].cumsum()
+    df['Kümülatif Sonuç Yüzdesi'] = df['Install'] / AUDIENCE_SIZE #df['Install'].cumsum()  / AUDIENCE_SIZE
 
     cum_ad_spend = np.array(df['Kümülatif Harcanan Para'], dtype='f')
     cum_result = np.array(df['Kümülatif Sonuç Yüzdesi'], dtype='f')
@@ -306,6 +309,8 @@ def kampanya():
     if day == "1":
         df = pd.read_pickle('./df.pickle')
 
+        flash('Eski Bid: ' + str(bid))
+
         #df = df.dropna()
         #df = df[df['Campaign name'].str.contains('Android')] # Android'e ozel olmamali
         #df = df.sort_values(by=['Day'])
@@ -318,7 +323,10 @@ def kampanya():
         #df2.sort_values(by='Day', ascending=False)
         #df2 = df2.tail(ONLINE_LEARNING_N)
         for i in range(len(df)):
-            new_entry = pd.DataFrame({'Day': 0, 'B': 0, 'T': 0, 'Bid': df2['Cost'].iloc[i], 'P': 0, 'M': 0, 'U': 0, 'Reach': df2['Install'].iloc[i] / AUDIENCE_SIZE}, index=[0])
+            #if i:
+            #    new_entry = pd.DataFrame({'Day': 0, 'B': 0, 'T': 0, 'Bid': kampanya_df['Bid'].iloc[i-1] + df2['Cost'].iloc[i], 'P': 0, 'M': 0, 'U': 0, 'Reach':  kampanya_df['Reach'].iloc[i-1] + (df2['Install'].iloc[i] / AUDIENCE_SIZE)}, index=[0])
+            #else:
+            new_entry = pd.DataFrame({'Date': df2['Date'].iloc[i], 'Day': 0, 'B': 0, 'T': 0, 'Bid': df2['Cost'].iloc[i], 'P': 0, 'M': 0, 'U': 0, 'Reach':  df2['Install'].iloc[i] / AUDIENCE_SIZE}, index=[0])            
             kampanya_df = kampanya_df.append(new_entry, ignore_index=True)
         kampanya_df = kampanya_df.append(pd.DataFrame({'Day': int(day), 'B': float(b), 'T': int(t), 'Bid': float(bid), 'P': float(p), 'M': float(m), 'U':float(u), 'Reach':0},  index=[0]), ignore_index=True)
         kampanya_df.to_pickle("./kampanya_df.pickle") # Yeni kampanya için overwrite
@@ -327,42 +335,37 @@ def kampanya():
 
     yeni_bid = 0
 
-    print(kampanya_df)
-
     if request.method == 'POST' and  request.form['Dün Harcanılan Para'] and request.form['Dün Alınan Sonuç']:
-        last_index = len(kampanya_df) #i
-        yeni_q = int(request.form['Dün Alınan Sonuç']) / 2500000 + kampanya_df.iloc[-1]['Reach']
-        #kampanya_df ye ekle        
-        g_models = [] # Step 1,
-        for j in range(last_index - ONLINE_LEARNING_N + 1, last_index): # Son n tane sample icin icin g_star hesapla
-            total_effectiveness = 0
-            for k in range(ONLINE_LEARNING_N): 
-                total_effectiveness += exponential_effectiveness(kampanya_df.iloc[j-k]['Bid'], kampanya_df.iloc[-1]['M'], kampanya_df.iloc[-1]['U']) # Son n veriyi cek
-                print(j)
-                print(j-k)
-                print(total_effectiveness)
-            g_models.append(g_16(WORD_OF_MOUTH, yeni_q, total_effectiveness)) # Q = o gun alinan sonuc / yeni kitle
-        print('G Models')
-        print(g_models)
-        yeni_b = kampanya_df.iloc[-1]['B'] - float(request.form['Dün Harcanılan Para']) # Step 2
-        if yeni_b < 0:
-            flash('Out of budget')
-        def step3(parameters):
-            integral = lambda t: ((parameters[0] * parameters[1] - the_beta(kampanya_df.iloc[-1]['P'], WORD_OF_MOUTH, parameters[0], parameters[1], kampanya_df.iloc[-1]['T'])) * t / parameters[1]) #scipy.integrate.quad(exponential_effectiveness, 0, i, args=(parameters[0], parameters[1]))
-            summation = [((j - last_index + ONLINE_LEARNING_N) * (g_models[j - last_index + ONLINE_LEARNING_N - 1] - g_16(WORD_OF_MOUTH, yeni_q, integral(j)))) for j in range(last_index - ONLINE_LEARNING_N + 1, last_index)] #bircok seyi duzelt
-            print('Summation Step 3')
-            print(summation)
-            return (2 / ((ONLINE_LEARNING_N + 1) * ONLINE_LEARNING_N)) * np.sum(summation)       
-    
-        result = scipy.optimize.least_squares(step3, x0=np.array([kampanya_df.iloc[-1]['M'], kampanya_df.iloc[-1]['U']]))
-        print('Opt Results')
-        print(result)
-        yeni_bid = new_bid(kampanya_df.iloc[-1]['P'], WORD_OF_MOUTH, result.x[0], result.x[1], kampanya_df.iloc[-1]['T'])
-        kampanya_df = kampanya_df.append(pd.DataFrame({'Day': kampanya_df.iloc[-1]['Day'] + 1, 'B': yeni_b, 'T':  kampanya_df.iloc[-1]['T'], 'Bid': yeni_bid, 'P':  kampanya_df.iloc[-1]['P'], 'M': result.x[0], 'U': result.x[1], 'Reach':yeni_q}, index=[0]), ignore_index=True)        
-        print('Yeni Kampanya Df')
-        print(kampanya_df)
+        harcanilan_para = float(request.form['Dün Harcanılan Para'])
+        sonuc = float(request.form['Dün Alınan Sonuç'])
+
+        new_entry = pd.DataFrame({'Day': kampanya_df.iloc[-1]['Day'] + 1, 'B': 0, 'T': 0, 'Bid': harcanilan_para, 'P': 0, 'M': 0, 'U': 0, 'Reach':  sonuc / AUDIENCE_SIZE}, index=[0])
+        
+        kampanya_df = kampanya_df.sort_values(by=['Date'])
+        gecici_df = kampanya_df.append(new_entry, ignore_index=True)
+        #gecici_df = gecici_df.tail(ONLINE_LEARNING_N)
+
+        gecici_df['Kümülatif Harcanan Para'] = gecici_df['Bid'] #gecici_df['Bid'].cumsum()
+        gecici_df['Kümülatif Sonuç Yüzdesi'] = gecici_df['Reach'] #gecici_df['Reach'].cumsum()
+
+        gecici_df = gecici_df.sort_values(by=['Bid'])
+        cum_ad_spend = np.array(gecici_df['Kümülatif Harcanan Para'], dtype='f')
+        cum_result = np.array(gecici_df['Kümülatif Sonuç Yüzdesi'], dtype='f')
+            
+        p0 = [kampanya_df.iloc[-1]['M'], kampanya_df.iloc[-1]['U']]
+
+        popt, _ = curve_fit(exponential_effectiveness, cum_ad_spend, cum_result, p0=p0, maxfev=5000)
+        [m, u] = popt
+
+        yeni_bid = new_bid(kampanya_df.iloc[-1]['P'], WORD_OF_MOUTH, m, u, kampanya_df.iloc[-1]['T'])
+        flash('Yeni bid: ' + str(yeni_bid))
+
+        yeni_b = kampanya_df.iloc[-1]['B'] - harcanilan_para # Step 2
+
+        kampanya_df = kampanya_df.append(pd.DataFrame({'Day': kampanya_df.iloc[-1]['Day'] + 1, 'B': yeni_b, 'T':  kampanya_df.iloc[-1]['T'], 'Bid': yeni_bid, 'P':  kampanya_df.iloc[-1]['P'], 'M': m, 'U': u, 'Reach': sonuc / AUDIENCE_SIZE}, index=[0]), ignore_index=True)        
         kampanya_df.to_pickle("./kampanya_df.pickle")
-        flash('Yeni İhale Değeri: ' + str(yeni_bid))
+        print(kampanya_df)
+
     elif request.method == 'POST':
         flash('Lütfen formu doldurun')
 
