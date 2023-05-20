@@ -362,10 +362,10 @@ def kampanya():
 
         yeni_b = kampanya_df.iloc[-1]['B'] - harcanilan_para # Step 2
 
-        kampanya_df = kampanya_df.append(pd.DataFrame({'Day': kampanya_df.iloc[-1]['Day'] + 1, 'B': yeni_b, 'T':  kampanya_df.iloc[-1]['T'], 'Bid': yeni_bid, 'P':  kampanya_df.iloc[-1]['P'], 'M': m, 'U': u, 'Reach': sonuc / AUDIENCE_SIZE}, index=[0]), ignore_index=True)        
+        kampanya_df = kampanya_df.append(pd.DataFrame({'Day': kampanya_df.iloc[-1]['Day'] + 1, 'B': yeni_b, 'T':  kampanya_df.iloc[-1]['T']-1, 'Bid': yeni_bid, 'P':  kampanya_df.iloc[-1]['P'], 'M': m, 'U': u, 'Reach': sonuc / AUDIENCE_SIZE}, index=[0]), ignore_index=True)        
         kampanya_df.to_pickle("./kampanya_df.pickle")
         print(kampanya_df)
-
+        
     elif request.method == 'POST':
         flash('Lütfen formu doldurun')
 
