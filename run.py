@@ -17,7 +17,7 @@ from mpl_toolkits.mplot3d import Axes3D
 import plotly
 import plotly.express as px
 
-from constants import WORD_OF_MOUTH, INITIAL_EXPOSURE, ONLINE_LEARNING_N, AUDIENCE_SIZE
+from constants import WORD_OF_MOUTH, INITIAL_EXPOSURE, ONLINE_LEARNING_N, AUDIENCE_SIZE, DECAY_RATE
 
 UPLOAD_FOLDER = 'uploads'
 ALLOWED_EXTENSIONS = {'csv', 'pdf', 'xlsx'}
@@ -343,7 +343,7 @@ def kampanya():
         
         kampanya_df = kampanya_df.sort_values(by=['Date'])
         gecici_df = kampanya_df.append(new_entry, ignore_index=True)
-        #gecici_df = gecici_df.tail(ONLINE_LEARNING_N)
+        gecici_df['Weights'] = np.array([np.power(DECAY_RATE, i) for i in range(len(gecici_df))])
 
         gecici_df['Kümülatif Harcanan Para'] = gecici_df['Bid'] #gecici_df['Bid'].cumsum()
         gecici_df['Kümülatif Sonuç Yüzdesi'] = gecici_df['Reach'] #gecici_df['Reach'].cumsum()
@@ -354,7 +354,7 @@ def kampanya():
             
         p0 = [kampanya_df.iloc[-1]['M'], kampanya_df.iloc[-1]['U']]
 
-        popt, _ = curve_fit(exponential_effectiveness, cum_ad_spend, cum_result, p0=p0, maxfev=5000)
+        popt, _ = curve_fit(exponential_effectiveness, cum_ad_spend, cum_result, p0=p0, maxfev=5000, sigma=gecici_df['Weights'].to_numpy())
         [m, u] = popt
 
         yeni_bid = new_bid(kampanya_df.iloc[-1]['P'], WORD_OF_MOUTH, m, u, kampanya_df.iloc[-1]['T'])
@@ -364,7 +364,6 @@ def kampanya():
 
         kampanya_df = kampanya_df.append(pd.DataFrame({'Day': kampanya_df.iloc[-1]['Day'] + 1, 'B': yeni_b, 'T':  kampanya_df.iloc[-1]['T']-1, 'Bid': yeni_bid, 'P':  kampanya_df.iloc[-1]['P'], 'M': m, 'U': u, 'Reach': sonuc / AUDIENCE_SIZE}, index=[0]), ignore_index=True)        
         kampanya_df.to_pickle("./kampanya_df.pickle")
-        print(kampanya_df)
         
     elif request.method == 'POST':
         flash('Lütfen formu doldurun')
