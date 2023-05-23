@@ -1,23 +1,17 @@
-from flask import Flask, flash, render_template, request, redirect, url_for, session, send_file
-from utils import exponential_effectiveness, g_16, new_bid, pareto_frontier_B_b, the_beta
+from flask import Flask, flash, render_template, request, redirect, url_for, session
+from utils import exponential_effectiveness, new_bid, pareto_frontier_B_b, maximize_p1p2_sum, maximize_n1n2_sum, maximize_ltv1ltv2_sum
 from werkzeug.utils import secure_filename
 from matplotlib.figure import Figure
 from scipy.optimize import curve_fit
-import scipy
-from io import BytesIO
-#from snap7 import util
 import pandas as pd
 import numpy as np
 import json
 import os
 
-import matplotlib.pyplot as plt
-from mpl_toolkits.mplot3d import Axes3D
-
 import plotly
 import plotly.express as px
 
-from constants import WORD_OF_MOUTH, INITIAL_EXPOSURE, ONLINE_LEARNING_N, AUDIENCE_SIZE, DECAY_RATE
+from constants import WORD_OF_MOUTH, INITIAL_EXPOSURE, ONLINE_LEARNING_N, AUDIENCE_SIZE, DECAY_RATE, P0
 
 UPLOAD_FOLDER = 'uploads'
 ALLOWED_EXTENSIONS = {'csv', 'pdf', 'xlsx'}
@@ -54,30 +48,31 @@ def index():
 
             if extension == 'csv':
                 df = pd.read_csv(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+                df.to_pickle("./df.pickle")
+                return redirect('/rapor.html')
             elif extension == 'xlsx':
-                df = pd.read_excel(os.path.join(app.config['UPLOAD_FOLDER'], filename))
-                df = df.rename(columns={'Unnamed: 0': 'Date'})
-                df = df[df['Date'].notna()]
-                df['Cost'] = df['Cost'].str.replace('$', '').str.replace(',', '.') #1.000,23 seklinde . lar yok diye varsaydik
-                df['Cost'] = df['Cost'].astype(float)
-            df.to_pickle("./df.pickle")
+                xl = pd.ExcelFile(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+                if len(xl.sheet_names) == 1:
+
+                    df = pd.read_excel(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+                    df = df.rename(columns={'Unnamed: 0': 'Date'})
+                    df = df[df['Date'].notna()]
+                    df['Cost'] = df['Cost'].str.replace('$', '').str.replace(',', '.') #1.000,23 seklinde . lar yok diye varsaydik
+                    df['Cost'] = df['Cost'].astype(float)
+                    df.to_pickle("./df.pickle")
+                    return redirect('/rapor.html')
+                else:
+                    for name in xl.sheet_names:
+                        df = xl.parse(name)
+                        df = df[df['Date'].notna()]
+                        df['Cost'] = df['Cost'].str.replace('$', '').str.replace(',', '.') #1.000,23 seklinde . lar yok diye varsaydik
+                        df['Cost'] = df['Cost'].astype(float)
+                        df.to_pickle("./{}.pickle".format(name))
+                    return redirect('/rapor_mp.html')
+            
             session['messages'] = filename
-            return redirect('/rapor.html')
+            
     return render_template("homepage.html")
-
-@app.route('/rapor_kitle.html', methods = ['GET', 'POST'])
-def rapor_kitle():
-    
-    graphJSON = {}
-    df = pd.read_pickle("./df_kitle.pickle")
-    #her kitle icin kumulatif ulasma ve harcama hesapla
-    cumulatives = []
-    popts = []
-
-    for [spend, reach] in cumulatives:
-        popts.append(curve_fit(exponential_effectiveness, spend, reach))
-
-    return render_template('rapor_kitle.html')
     
 @app.route('/rapor.html', methods = ['GET', 'POST'])
 def rapor():
@@ -113,13 +108,10 @@ def rapor():
     cum_result = np.array(df['Kümülatif Sonuç Yüzdesi'], dtype='f')
     df['Veri Kaynağı'] = 'Gerçek'
         
-    p0 = [9.42189734e+05, 2.19703087e-03]
-    popt, _ = curve_fit(exponential_effectiveness, cum_ad_spend, cum_result, p0=p0, maxfev=5000)
+    popt, _ = curve_fit(exponential_effectiveness, cum_ad_spend, cum_result, p0=P0, maxfev=5000)
 
-
-    #popt = [0.014774, 0.913376, 0.632359, -0.014672]
     [m, u] = popt
-    pareto_array = np.array([[p, t, *pareto_frontier_B_b(p, WORD_OF_MOUTH, m, u, t)] for p in [0.000001, 0.00001, 0.0001, 0.001, 0.01, 0.1, 0.02, 0.03, 0.04, 0.05] for t in np.linspace(1, 30, 30)])
+    pareto_array = np.array([[p, t, *pareto_frontier_B_b(p, WORD_OF_MOUTH, m, u, t, INITIAL_EXPOSURE)] for p in [0.000001, 0.00001, 0.0001, 0.001, 0.01, 0.1, 0.02, 0.03, 0.04, 0.05] for t in np.linspace(1, 30, 30)])
 
     pareto_df = pd.DataFrame({'P': pareto_array[:, 0], 'T': pareto_array[:, 1], 'B': pareto_array[:, 2], 'Bid': pareto_array[:, 3]})
     pareto_df = pareto_df.dropna()
@@ -133,115 +125,9 @@ def rapor():
     return render_template('rapor.html', graphJSON=graphJSON, graphJSON2=graphJSON2, m=m, u=u, kitle='Hedef Kitledeki Kişi Sayısı: ' + str(AUDIENCE_SIZE))
 
 
-@app.route('/rapor_multiplatform.html', methods =['GET', 'POST'])
+@app.route('/rapor_mp.html', methods =['GET', 'POST'])
 def rapor_mp():
-
-    def plot_px(df):
-        fig = px.line(df, x='Kümülatif Harcanan Para', y='Kümülatif Ulaşılan Kişi Sayısı', markers=True, color='Inferred', title="Harcanan Para vs Ulaşılan Kişi Sayısı")
-        graphJSON = json.dumps(fig, cls=plotly.utils.PlotlyJSONEncoder)
-        
-        return graphJSON
-
-    def plot_pareto(df):
-        fig = px.line(df, x='B', y='T', markers=True, color='P', hover_data=['Bid'], title="B vs T vs P (Min B)")
-        graphJSON = json.dumps(fig, cls=plotly.utils.PlotlyJSONEncoder)
-        
-        return graphJSON
-
-    def pareto_frontier_B_b(p, a, m, u, T):
-        tmin = np.log((a * p + 1) / (1 - p)) / (m * (1 + a))
-        B = ((-T/u) * np.log(1 - (tmin/T)))
-
-        beta = u * (m - 1/((1 + a) * T) * np.log((a * p + 1)/((1 - p))))
-        bid = 1 / u * np.log(m * u / beta)
-
-        return B, bid
-    
-    def maximize_p1p2_sum(platform_pars_1, m_u_1, platform_pars_2, m_u_2, b_limit, T=10, sens=10):
-        max_sum = -1
-        optimal_p1 = -1
-        optimal_p2 = -1
-        opt_b1 = -1
-        opt_b2 = -1
-        
-        
-        b1_a = [pareto_frontier_B_b(p,platform_pars_1[0],m_u_1[0],m_u_1[1],T)[0] for p in np.linspace(0,1,sens)]
-        b2_a = [pareto_frontier_B_b(p,platform_pars_2[0],m_u_2[0],m_u_2[1],T)[0] for p in np.linspace(0,1,sens)]
-        
-        b1_array = np.column_stack((b1_a, np.linspace(0,1,sens)))
-        b2_array = np.column_stack((b2_a, np.linspace(0,1,sens)))
-        
-        for b1 in range(len(b1_a)):
-            for b2 in range(len(b2_a)):
-                if (b1_array[b1][0]+b2_array[b2][0])<b_limit:
-                    p1 = b1_array[b1][1]
-                    p2 = b2_array[b2][1]
-                    current_sum = p1 + p2
-                if current_sum > max_sum:
-                    max_sum = current_sum
-                    optimal_p1 = p1
-                    optimal_p2 = p2
-                    opt_b1 = b1_array[b1][0]
-                    opt_b2 = b2_array[b2][0]
-        return optimal_p1, optimal_p2, opt_b1, opt_b2, max_sum
-    
-    def maximize_n1n2_sum(platform_pars_1, m_u_1, platform_pars_2, m_u_2, b_limit, T=10, sens=10):
-        max_sum = -1
-        optimal_p1 = -1
-        optimal_p2 = -1
-        opt_b1 = -1
-        opt_b2 = -1
-        
-        b1_a = [pareto_frontier_B_b(p,platform_pars_1[0],m_u_1[0],m_u_1[1],T)[0] for p in np.linspace(0,1,sens)]
-        b2_a = [pareto_frontier_B_b(p,platform_pars_2[0],m_u_2[0],m_u_2[1],T)[0] for p in np.linspace(0,1,sens)]
-        
-        b1_array = np.column_stack((b1_a, platform_pars_1[1]*np.linspace(0,1,sens)))
-        b2_array = np.column_stack((b2_a, platform_pars_2[1]*np.linspace(0,1,sens)))
-        
-        for b1 in range(len(b1_a)):
-            for b2 in range(len(b2_a)):
-                if (b1_array[b1][0]+b2_array[b2][0])<b_limit:
-                    p1 = b1_array[b1][1]
-                    p2 = b2_array[b2][1]
-                    current_sum = p1 + p2
-                if current_sum > max_sum:
-                    max_sum = current_sum
-                    optimal_p1 = p1
-                    optimal_p2 = p2
-                    opt_b1 = b1_array[b1][0]
-                    opt_b2 = b2_array[b2][0]
-        return optimal_p1, optimal_p2, opt_b1, opt_b2, max_sum
-    
-    def maximize_ltv1ltv2_sum(platform_pars_1, m_u_1, platform_pars_2, m_u_2, b_limit, T=10, sens=10):
-        max_sum = -1
-        optimal_p1 = -1
-        optimal_p2 = -1
-        opt_b1 = -1
-        opt_b2 = -1
-        
-        b1_a = [pareto_frontier_B_b(p,platform_pars_1[0],m_u_1[0],m_u_1[1],T)[0] for p in np.linspace(0,1,sens)]
-        b2_a = [pareto_frontier_B_b(p,platform_pars_2[0],m_u_2[0],m_u_2[1],T)[0] for p in np.linspace(0,1,sens)]
-        
-        b1_array = np.column_stack((b1_a, platform_pars_2[2]*platform_pars_1[1]*np.linspace(0,1,sens)))
-        b2_array = np.column_stack((b2_a, platform_pars_2[2]*platform_pars_2[1]*np.linspace(0,1,sens)))
-        
-        for b1 in range(len(b1_a)):
-            for b2 in range(len(b2_a)):
-                if (b1_array[b1][0]+b2_array[b2][0])<b_limit:
-                    p1 = b1_array[b1][1]
-                    p2 = b2_array[b2][1]
-                    current_sum = p1 + p2
-                if current_sum > max_sum:
-                    max_sum = current_sum
-                    optimal_p1 = p1
-                    optimal_p2 = p2
-                    opt_b1 = b1_array[b1][0]
-                    opt_b2 = b2_array[b2][0]
-        return optimal_p1, optimal_p2, opt_b1, opt_b2, max_sum
        
-
-
-    
     # uploaded data 1
     
     #df1 = pd.read_pickle("./df_1.pickle")  
@@ -255,8 +141,7 @@ def rapor_mp():
     cum_result_1 = np.array(df1['Kümülatif Sonuç Yüzdesi'], dtype='f')
     df1['Veri Kaynağı'] = 'Gerçek'
         
-    p0 = [9.42189734e+05, 2.19703087e-03]
-    popt_1, _ = curve_fit(exponential_effectiveness, cum_ad_spend_1, cum_result_1, p0=p0, maxfev=5000)
+    popt_1, _ = curve_fit(exponential_effectiveness, cum_ad_spend_1, cum_result_1, p0=P0, maxfev=5000)
 
 
     # uploaded data 2
@@ -275,9 +160,7 @@ def rapor_mp():
     p0 = [9.42189734e+05, 2.19703087e-03]
     popt_2, _ = curve_fit(exponential_effectiveness, cum_ad_spend_2, cum_result_2, p0=p0, maxfev=5000)
 
-
     # solve models for percentage, reach, ltv maximization
-
 
     b_limit = 5000 # take as input later
     platform_pars_1 = [0.1, 400000, 19.28] # a,n,ltv - take as input
@@ -336,17 +219,18 @@ def kampanya():
     yeni_bid = 0
 
     if request.method == 'POST' and  request.form['Dün Harcanılan Para'] and request.form['Dün Alınan Sonuç']:
+        
         harcanilan_para = float(request.form['Dün Harcanılan Para'])
         sonuc = float(request.form['Dün Alınan Sonuç'])
 
         new_entry = pd.DataFrame({'Day': kampanya_df.iloc[-1]['Day'] + 1, 'B': 0, 'T': 0, 'Bid': harcanilan_para, 'P': 0, 'M': 0, 'U': 0, 'Reach':  sonuc / AUDIENCE_SIZE}, index=[0])
         
         kampanya_df = kampanya_df.sort_values(by=['Date'])
-        gecici_df = kampanya_df.append(new_entry, ignore_index=True)
-        gecici_df['Weights'] = np.array([np.power(DECAY_RATE, i) for i in range(len(gecici_df))])
+        gecici_df = kampanya_df.append(new_entry, ignore_index=True) # Gecici df m,u hesaplamak icin aciliyor
+        gecici_df['Weights'] = np.array([np.power(DECAY_RATE, i) for i in range(len(gecici_df))]) # Exponential weighting, n>4000 de underflow sorunu olabilir
 
-        gecici_df['Kümülatif Harcanan Para'] = gecici_df['Bid'] #gecici_df['Bid'].cumsum()
-        gecici_df['Kümülatif Sonuç Yüzdesi'] = gecici_df['Reach'] #gecici_df['Reach'].cumsum()
+        gecici_df['Kümülatif Harcanan Para'] = gecici_df['Bid']
+        gecici_df['Kümülatif Sonuç Yüzdesi'] = gecici_df['Reach']
 
         gecici_df = gecici_df.sort_values(by=['Bid'])
         cum_ad_spend = np.array(gecici_df['Kümülatif Harcanan Para'], dtype='f')
@@ -357,12 +241,23 @@ def kampanya():
         popt, _ = curve_fit(exponential_effectiveness, cum_ad_spend, cum_result, p0=p0, maxfev=5000, sigma=gecici_df['Weights'].to_numpy())
         [m, u] = popt
 
-        yeni_bid = new_bid(kampanya_df.iloc[-1]['P'], WORD_OF_MOUTH, m, u, kampanya_df.iloc[-1]['T'])
+        yeni_bid = new_bid(kampanya_df.iloc[-1]['P'], WORD_OF_MOUTH, m, u, kampanya_df.iloc[-1]['T'], kampanya_df.iloc[-1]['Reach'])
         flash('Yeni bid: ' + str(yeni_bid))
+        if yeni_bid < 0:
+             flash('Amaca ulaşıldı!')
 
         yeni_b = kampanya_df.iloc[-1]['B'] - harcanilan_para # Step 2
+        if yeni_b < 0:
+            flash('Bütçe aşıldı!')
 
-        kampanya_df = kampanya_df.append(pd.DataFrame({'Day': kampanya_df.iloc[-1]['Day'] + 1, 'B': yeni_b, 'T':  kampanya_df.iloc[-1]['T']-1, 'Bid': yeni_bid, 'P':  kampanya_df.iloc[-1]['P'], 'M': m, 'U': u, 'Reach': sonuc / AUDIENCE_SIZE}, index=[0]), ignore_index=True)        
+        if yeni_bid > yeni_b:
+            flash('Yeni ihale değeri, kalan bütçeyi aşıyor!')
+
+        if kampanya_df.iloc[-1]['T'] == 1:
+            flash('Kampanya süresi doldu!')
+
+        kampanya_df = kampanya_df.append(pd.DataFrame({'Day': kampanya_df.iloc[-1]['Day'] + 1, 'B': yeni_b, 'T':  kampanya_df.iloc[-1]['T']-1, 'Bid': yeni_bid, 'P':  kampanya_df.iloc[-1]['P'], 'M': m, 'U': u, 'Reach': kampanya_df.iloc[-1]['Reach'] + (sonuc / AUDIENCE_SIZE)}, index=[0]), ignore_index=True)        
+        print(kampanya_df)
         kampanya_df.to_pickle("./kampanya_df.pickle")
         
     elif request.method == 'POST':
