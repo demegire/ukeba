@@ -80,7 +80,7 @@ def index():
 def rapor():
 
     def plot_px(df):
-        fig = px.line(df, x='Kümülatif Harcanan Para', y='Kümülatif Sonuç Yüzdesi', markers=True, color='Veri Kaynağı', title="Harcanan Para vs Sonuç Yüzdesi")
+        fig = px.line(df, x='Verilen İhale Değeri', y='Sonuç Yüzdesi', markers=True, color='Veri Kaynağı', title="Verilen İhale Değeri vs Sonuç Yüzdesi")
         graphJSON = json.dumps(fig, cls=plotly.utils.PlotlyJSONEncoder)
         
         return graphJSON
@@ -94,20 +94,13 @@ def rapor():
     graphJSON = {}
 
     df = pd.read_pickle("./df.pickle")
-    #df = df.head()
-
-    #df = df.dropna()
-    #df = df[df['Campaign name'].str.contains('Android')]
-    #df = df.sort_values(by=['Day'])
-    #df['Kümülatif Harcanan Para'] = df['Amount spent (USD)'].cumsum()
-    #df['Kümülatif Sonuç Yüzdesi'] = df['Reach'].cumsum()
 
     df = df.sort_values(by=['Cost'])
-    df['Kümülatif Harcanan Para'] = df['Cost'] #df['Cost'].cumsum()
-    df['Kümülatif Sonuç Yüzdesi'] = df['Install'] / AUDIENCE_SIZE #df['Install'].cumsum()  / AUDIENCE_SIZE
+    df['Verilen İhale Değeri'] = df['Cost'] 
+    df['Sonuç Yüzdesi'] = df['Install'] / AUDIENCE_SIZE
 
-    cum_ad_spend = np.array(df['Kümülatif Harcanan Para'], dtype='f')
-    cum_result = np.array(df['Kümülatif Sonuç Yüzdesi'], dtype='f')
+    cum_ad_spend = np.array(df['Verilen İhale Değeri'], dtype='f')
+    cum_result = np.array(df['Sonuç Yüzdesi'], dtype='f')
     df['Veri Kaynağı'] = 'Gerçek'
         
     popt, _ = curve_fit(exponential_effectiveness, cum_ad_spend, cum_result, p0=P0, maxfev=5000)
@@ -119,7 +112,7 @@ def rapor():
     pareto_df = pareto_df.dropna()
     
     for spend, reach in zip(cum_ad_spend, exponential_effectiveness(cum_ad_spend, *popt)):
-        df = df.append({'Kümülatif Harcanan Para': spend, 'Kümülatif Sonuç Yüzdesi': reach, 'Veri Kaynağı': 'Tahmin'}, ignore_index = True)
+        df = df.append({'Verilen İhale Değeri': spend, 'Sonuç Yüzdesi': reach, 'Veri Kaynağı': 'Tahmin'}, ignore_index = True)
     
     graphJSON = plot_px(df)
     graphJSON2 = plot_pareto(pareto_df)    
@@ -136,11 +129,11 @@ def rapor_mp():
     df1 = pd.read_pickle("./df.pickle") 
     
     df1 = df1.sort_values(by=['Date'])
-    df1['Kümülatif Harcanan Para'] = df1['Cost'].cumsum()
-    df1['Kümülatif Sonuç Yüzdesi'] = df1['Install'].cumsum()  / AUDIENCE_SIZE
+    df1['Verilen İhale Değeri'] = df1['Cost'].cumsum()
+    df1['Sonuç Yüzdesi'] = df1['Install'].cumsum()  / AUDIENCE_SIZE
 
-    cum_ad_spend_1 = np.array(df1['Kümülatif Harcanan Para'], dtype='f')
-    cum_result_1 = np.array(df1['Kümülatif Sonuç Yüzdesi'], dtype='f')
+    cum_ad_spend_1 = np.array(df1['Verilen İhale Değeri'], dtype='f')
+    cum_result_1 = np.array(df1['Sonuç Yüzdesi'], dtype='f')
     df1['Veri Kaynağı'] = 'Gerçek'
         
     popt_1, _ = curve_fit(exponential_effectiveness, cum_ad_spend_1, cum_result_1, p0=P0, maxfev=5000)
@@ -152,11 +145,11 @@ def rapor_mp():
     df2 = pd.read_pickle("./df.pickle") 
     
     df2 = df2.sort_values(by=['Date'])
-    df2['Kümülatif Harcanan Para'] = df2['Cost'].cumsum()
-    df2['Kümülatif Sonuç Yüzdesi'] = df2['Install'].cumsum()  / AUDIENCE_SIZE
+    df2['Verilen İhale Değeri'] = df2['Cost'].cumsum()
+    df2['Sonuç Yüzdesi'] = df2['Install'].cumsum()  / AUDIENCE_SIZE
 
-    cum_ad_spend_2 = np.array(df2['Kümülatif Harcanan Para'], dtype='f')
-    cum_result_2 = np.array(df2['Kümülatif Sonuç Yüzdesi'], dtype='f')
+    cum_ad_spend_2 = np.array(df2['Verilen İhale Değeri'], dtype='f')
+    cum_result_2 = np.array(df2['Sonuç Yüzdesi'], dtype='f')
     df2['Veri Kaynağı'] = 'Gerçek'
         
     p0 = [9.42189734e+05, 2.19703087e-03]
@@ -195,30 +188,26 @@ def kampanya():
         df = pd.read_pickle('./df.pickle')
 
         flash('Eski Bid: ' + str(bid))
-
-        #df = df.dropna()
-        #df = df[df['Campaign name'].str.contains('Android')] # Android'e ozel olmamali
-        #df = df.sort_values(by=['Day'])
-        #df['Cumulative Spent'] = df['Amount spent (USD)'].cumsum()
-        #df['Cumulative Reach'] = df['Reach'].cumsum() / 500000 # Audience size belirlenmeli
-        
-        # Son n gunu kampanya_df ye ekle df['Amount spent (USD)'] df['Reach']            
+         
         kampanya_df = pd.DataFrame(columns=['Day', 'B', 'T', 'Bid', 'P', 'M', 'U', 'Reach'])
         df2 = df.copy()
-        #df2.sort_values(by='Day', ascending=False)
-        #df2 = df2.tail(ONLINE_LEARNING_N)
         for i in range(len(df)):
-            #if i:
-            #    new_entry = pd.DataFrame({'Day': 0, 'B': 0, 'T': 0, 'Bid': kampanya_df['Bid'].iloc[i-1] + df2['Cost'].iloc[i], 'P': 0, 'M': 0, 'U': 0, 'Reach':  kampanya_df['Reach'].iloc[i-1] + (df2['Install'].iloc[i] / AUDIENCE_SIZE)}, index=[0])
-            #else:
             new_entry = pd.DataFrame({'Date': df2['Date'].iloc[i], 'Day': 0, 'B': 0, 'T': 0, 'Bid': df2['Cost'].iloc[i], 'P': 0, 'M': 0, 'U': 0, 'Reach':  df2['Install'].iloc[i] / AUDIENCE_SIZE}, index=[0])            
             kampanya_df = kampanya_df.append(new_entry, ignore_index=True)
         kampanya_df = kampanya_df.append(pd.DataFrame({'Day': int(day), 'B': float(b), 'T': int(t), 'Bid': float(bid), 'P': float(p), 'M': float(m), 'U':float(u), 'Reach':0},  index=[0]), ignore_index=True)
-        kampanya_df.to_pickle("./kampanya_df.pickle") # Yeni kampanya için overwrite
+        kampanya_df.to_pickle("./kampanya_df.pickle")
              
     kampanya_df = pd.read_pickle("./kampanya_df.pickle")
+    
+    print(kampanya_df)
 
     yeni_bid = 0
+
+    flash('Kampanya Günü: ' + str(kampanya_df.iloc[-1]['T']))
+
+    flash('Kalan Bütçe: ' + str(kampanya_df.iloc[-1]['B']))
+
+    flash('Ulaşılan Kitle Oranı: ' + str(kampanya_df.iloc[-1]['Reach']))
 
     if request.method == 'POST' and  request.form['Dün Harcanılan Para'] and request.form['Dün Alınan Sonuç']:
         
@@ -231,12 +220,12 @@ def kampanya():
         gecici_df = kampanya_df.append(new_entry, ignore_index=True) # Gecici df m,u hesaplamak icin aciliyor
         gecici_df['Weights'] = np.array([np.power(DECAY_RATE, i) for i in range(len(gecici_df))]) # Exponential weighting, n>4000 de underflow sorunu olabilir
 
-        gecici_df['Kümülatif Harcanan Para'] = gecici_df['Bid']
-        gecici_df['Kümülatif Sonuç Yüzdesi'] = gecici_df['Reach']
+        gecici_df['Verilen İhale Değeri'] = gecici_df['Bid']
+        gecici_df['Sonuç Yüzdesi'] = gecici_df['Reach']
 
         gecici_df = gecici_df.sort_values(by=['Bid'])
-        cum_ad_spend = np.array(gecici_df['Kümülatif Harcanan Para'], dtype='f')
-        cum_result = np.array(gecici_df['Kümülatif Sonuç Yüzdesi'], dtype='f')
+        cum_ad_spend = np.array(gecici_df['Verilen İhale Değeri'], dtype='f')
+        cum_result = np.array(gecici_df['Sonuç Yüzdesi'], dtype='f')
             
         p0 = [kampanya_df.iloc[-1]['M'], kampanya_df.iloc[-1]['U']]
 
@@ -258,12 +247,7 @@ def kampanya():
         if kampanya_df.iloc[-1]['T'] == 1:
             flash('Kampanya süresi doldu!')
 
-        flash('Kalan Bütçe: ' + str(yeni_b))
-
-        flash('Ulaşılan Kitle Yüzde: ' + str(kampanya_df.iloc[-1]['Reach'] + (sonuc / AUDIENCE_SIZE)))
-
         kampanya_df = kampanya_df.append(pd.DataFrame({'Day': kampanya_df.iloc[-1]['Day'] + 1, 'B': yeni_b, 'T':  kampanya_df.iloc[-1]['T']-1, 'Bid': yeni_bid, 'P':  kampanya_df.iloc[-1]['P'], 'M': m, 'U': u, 'Reach': kampanya_df.iloc[-1]['Reach'] + (sonuc / AUDIENCE_SIZE)}, index=[0]), ignore_index=True)        
-        print(kampanya_df)
         kampanya_df.to_pickle("./kampanya_df.pickle")
         
     elif request.method == 'POST':
