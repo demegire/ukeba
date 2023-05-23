@@ -105,9 +105,13 @@ def rapor():
     df['Veri Kaynağı'] = 'Gerçek'
         
     popt, _ = curve_fit(exponential_effectiveness, cum_ad_spend, cum_result, p0=P0, maxfev=5000)
-    gecici_df = pd.read_excel(os.path.join(app.config['UPLOAD_FOLDER'], 'toyshop_dailybreakdown.xlsx'))
+    gecici_df = pd.read_excel(os.path.join(app.config['UPLOAD_FOLDER'], 'toyshop_dailybreakdown_cells.xlsx'))
     [m, u] = popt
     pareto_array = np.array([[p, t, *pareto_frontier_B_b(p, WORD_OF_MOUTH, m, u, t, INITIAL_EXPOSURE)] for p in [0.000001, 0.00001, 0.0001, 0.001, 0.01, 0.1, 0.02, 0.03, 0.04, 0.05] for t in np.linspace(1, 30, 30)])
+    # Identify rows with NaN values
+    nan_rows = np.isnan(pareto_array).any(axis=1)
+    # Select rows without NaN values
+    pareto_array = pareto_array[~nan_rows]
     profits = np.array([revenue_estimator(gecici_df, p, AUDIENCE_SIZE, int(t), B, b) for p, t, B, b in pareto_array])
     pareto_df = pd.DataFrame({'P': pareto_array[:, 0], 'T': pareto_array[:, 1], 'B': pareto_array[:, 2], 'Bid': pareto_array[:, 3], 'Profit': profits})
     pareto_df = pareto_df.dropna()

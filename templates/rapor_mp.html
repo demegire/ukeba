@@ -34,7 +34,7 @@
 	Plotly.plot('chart2',graphs2,{});
 
 	chart2.on('plotly_click', function(data){
-		const bid = data.points[0].customdata[0];
+		const bid = data.points[0].customdata;
 		const p = data.points[0].data.legendgroup;
 		const b = data.points[0].x;
 		const t = data.points[0].y;

@@ -42,8 +42,8 @@ def maximize_p1p2_sum(platform_pars_1, m_u_1, platform_pars_2, m_u_2, b_limit, T
     opt_b2 = -1
     
     
-    b1_a = [pareto_frontier_B_b(p,platform_pars_1[0],m_u_1[0],m_u_1[1],T)[0] for p in np.linspace(0,1,sens)]
-    b2_a = [pareto_frontier_B_b(p,platform_pars_2[0],m_u_2[0],m_u_2[1],T)[0] for p in np.linspace(0,1,sens)]
+    b1_a = [pareto_frontier_B_b(p,platform_pars_1[0],m_u_1[0],m_u_1[1],T,q=0.1)[0] for p in np.linspace(0,1,sens)] # q will be changed
+    b2_a = [pareto_frontier_B_b(p,platform_pars_2[0],m_u_2[0],m_u_2[1],T,q=0.1)[0] for p in np.linspace(0,1,sens)]
     
     b1_array = np.column_stack((b1_a, np.linspace(0,1,sens)))
     b2_array = np.column_stack((b2_a, np.linspace(0,1,sens)))
@@ -69,8 +69,8 @@ def maximize_n1n2_sum(platform_pars_1, m_u_1, platform_pars_2, m_u_2, b_limit, T
     opt_b1 = -1
     opt_b2 = -1
     
-    b1_a = [pareto_frontier_B_b(p,platform_pars_1[0],m_u_1[0],m_u_1[1],T)[0] for p in np.linspace(0,1,sens)]
-    b2_a = [pareto_frontier_B_b(p,platform_pars_2[0],m_u_2[0],m_u_2[1],T)[0] for p in np.linspace(0,1,sens)]
+    b1_a = [pareto_frontier_B_b(p,platform_pars_1[0],m_u_1[0],m_u_1[1],T,q=0.1)[0] for p in np.linspace(0,1,sens)]
+    b2_a = [pareto_frontier_B_b(p,platform_pars_2[0],m_u_2[0],m_u_2[1],T,q=0.1)[0] for p in np.linspace(0,1,sens)]
     
     b1_array = np.column_stack((b1_a, platform_pars_1[1]*np.linspace(0,1,sens)))
     b2_array = np.column_stack((b2_a, platform_pars_2[1]*np.linspace(0,1,sens)))
@@ -96,8 +96,8 @@ def maximize_ltv1ltv2_sum(platform_pars_1, m_u_1, platform_pars_2, m_u_2, b_limi
     opt_b1 = -1
     opt_b2 = -1
     
-    b1_a = [pareto_frontier_B_b(p,platform_pars_1[0],m_u_1[0],m_u_1[1],T)[0] for p in np.linspace(0,1,sens)]
-    b2_a = [pareto_frontier_B_b(p,platform_pars_2[0],m_u_2[0],m_u_2[1],T)[0] for p in np.linspace(0,1,sens)]
+    b1_a = [pareto_frontier_B_b(p,platform_pars_1[0],m_u_1[0],m_u_1[1],T,q=0.1)[0] for p in np.linspace(0,1,sens)]
+    b2_a = [pareto_frontier_B_b(p,platform_pars_2[0],m_u_2[0],m_u_2[1],T,q=0.1)[0] for p in np.linspace(0,1,sens)]
     
     b1_array = np.column_stack((b1_a, platform_pars_2[2]*platform_pars_1[1]*np.linspace(0,1,sens)))
     b2_array = np.column_stack((b2_a, platform_pars_2[2]*platform_pars_2[1]*np.linspace(0,1,sens)))
@@ -201,7 +201,8 @@ def revenue_estimator(df, p, n, T, B, b):
         sum_temp = 0
     
     campaign_data = df[['Cost','active_users']].tail(T)
-    
+    print("ananin amina koyayim")
+    print(campaign_data)
     campaign_data_norm = (campaign_data-campaign_data.min())/(campaign_data.max()-campaign_data.min())
     b = model.predict(campaign_data) # not using the normalized data, will be reviewed later
     b_unnorm = b*(y.max()-y.min()) + y.min()
