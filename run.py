@@ -1,5 +1,5 @@
 from flask import Flask, flash, render_template, request, redirect, url_for, session
-from utils import exponential_effectiveness, new_bid, pareto_frontier_B_b, maximize_p1p2_sum, maximize_n1n2_sum, maximize_ltv1ltv2_sum
+from utils import exponential_effectiveness, new_bid, pareto_frontier_B_b, maximize_p1p2_sum, maximize_n1n2_sum, maximize_ltv1ltv2_sum, revenue_estimator
 from werkzeug.utils import secure_filename
 from matplotlib.figure import Figure
 from scipy.optimize import curve_fit
@@ -63,6 +63,7 @@ def index():
                     return redirect('/rapor.html')
                 else: # Install - Cost - Date columns are required in each sheet
                     for name in xl.sheet_names:
+                        print('name')
                         df = xl.parse(name)
                         if 'Unnamed: 0' in df.columns:
                             df = df.rename(columns={'Unnamed: 0': 'Date'})
@@ -86,7 +87,7 @@ def rapor():
         return graphJSON
     
     def plot_pareto(df):
-        fig = px.line(df, x='B', y='T', markers=True, color='P', hover_data=['Bid'], title="B vs T vs P (Min B)")
+        fig = px.line(df, x='B', y='T', markers=True, color='P', hover_data=['Bid', 'Profit'], title="B vs T vs P (Min B)")
         graphJSON = json.dumps(fig, cls=plotly.utils.PlotlyJSONEncoder)
         
         return graphJSON
@@ -104,11 +105,11 @@ def rapor():
     df['Veri Kaynağı'] = 'Gerçek'
         
     popt, _ = curve_fit(exponential_effectiveness, cum_ad_spend, cum_result, p0=P0, maxfev=5000)
-
+    gecici_df = pd.read_excel(os.path.join(app.config['UPLOAD_FOLDER'], 'toyshop_dailybreakdown.xlsx'))
     [m, u] = popt
     pareto_array = np.array([[p, t, *pareto_frontier_B_b(p, WORD_OF_MOUTH, m, u, t, INITIAL_EXPOSURE)] for p in [0.000001, 0.00001, 0.0001, 0.001, 0.01, 0.1, 0.02, 0.03, 0.04, 0.05] for t in np.linspace(1, 30, 30)])
-
-    pareto_df = pd.DataFrame({'P': pareto_array[:, 0], 'T': pareto_array[:, 1], 'B': pareto_array[:, 2], 'Bid': pareto_array[:, 3]})
+    profits = np.array([revenue_estimator(gecici_df, p, AUDIENCE_SIZE, int(t), B, b) for p, t, B, b in pareto_array])
+    pareto_df = pd.DataFrame({'P': pareto_array[:, 0], 'T': pareto_array[:, 1], 'B': pareto_array[:, 2], 'Bid': pareto_array[:, 3], 'Profit': profits})
     pareto_df = pareto_df.dropna()
     
     for spend, reach in zip(cum_ad_spend, exponential_effectiveness(cum_ad_spend, *popt)):
@@ -126,11 +127,11 @@ def rapor_mp():
     # uploaded data 1
     
     #df1 = pd.read_pickle("./df_1.pickle")  
-    df1 = pd.read_pickle("./df.pickle") 
+    df1 = pd.read_pickle("./Sayfa1.pickle") 
     
-    df1 = df1.sort_values(by=['Date'])
-    df1['Verilen İhale Değeri'] = df1['Cost'].cumsum()
-    df1['Sonuç Yüzdesi'] = df1['Install'].cumsum()  / AUDIENCE_SIZE
+    df1 = df1.sort_values(by=['Cost'])
+    df1['Verilen İhale Değeri'] = df1['Cost']
+    df1['Sonuç Yüzdesi'] = df1['Install'] / AUDIENCE_SIZE
 
     cum_ad_spend_1 = np.array(df1['Verilen İhale Değeri'], dtype='f')
     cum_result_1 = np.array(df1['Sonuç Yüzdesi'], dtype='f')
@@ -142,18 +143,17 @@ def rapor_mp():
     # uploaded data 2
     
     #df2 = pd.read_pickle("./df_2.pickle")  
-    df2 = pd.read_pickle("./df.pickle") 
+    df2 = pd.read_pickle("./Sheet2.pickle") 
     
     df2 = df2.sort_values(by=['Date'])
-    df2['Verilen İhale Değeri'] = df2['Cost'].cumsum()
-    df2['Sonuç Yüzdesi'] = df2['Install'].cumsum()  / AUDIENCE_SIZE
+    df2['Verilen İhale Değeri'] = df2['Cost']
+    df2['Sonuç Yüzdesi'] = df2['Install']  / AUDIENCE_SIZE
 
     cum_ad_spend_2 = np.array(df2['Verilen İhale Değeri'], dtype='f')
     cum_result_2 = np.array(df2['Sonuç Yüzdesi'], dtype='f')
     df2['Veri Kaynağı'] = 'Gerçek'
         
-    p0 = [9.42189734e+05, 2.19703087e-03]
-    popt_2, _ = curve_fit(exponential_effectiveness, cum_ad_spend_2, cum_result_2, p0=p0, maxfev=5000)
+    popt_2, _ = curve_fit(exponential_effectiveness, cum_ad_spend_2, cum_result_2, p0=P0, maxfev=5000)
 
     # solve models for percentage, reach, ltv maximization
 
@@ -170,7 +170,7 @@ def rapor_mp():
     results = [p_results, reach_results, ltv_results]
     popts = [popt_1, popt_2]
 
-    return render_template('rapor.html', kitle=results)
+    return render_template('rapor_mp.html', kitle=results)
 
 
 
@@ -198,8 +198,10 @@ def kampanya():
         kampanya_df.to_pickle("./kampanya_df.pickle")
              
     kampanya_df = pd.read_pickle("./kampanya_df.pickle")
+
+    print('AAAAAAAAAAAAAA')
     
-    print(kampanya_df)
+    print(kampanya_df) # Fix
 
     yeni_bid = 0
 
