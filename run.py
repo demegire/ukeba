@@ -61,11 +61,13 @@ def index():
                     df['Cost'] = df['Cost'].astype(float)
                     df.to_pickle("./df.pickle")
                     return redirect('/rapor.html')
-                else:
+                else: # Install - Cost - Date columns are required in each sheet
                     for name in xl.sheet_names:
                         df = xl.parse(name)
-                        df = df[df['Date'].notna()]
-                        df['Cost'] = df['Cost'].str.replace('$', '').str.replace(',', '.') #1.000,23 seklinde . lar yok diye varsaydik
+                        if 'Unnamed: 0' in df.columns:
+                            df = df.rename(columns={'Unnamed: 0': 'Date'})
+                            df = df[df['Date'].notna()]
+                            df['Cost'] = df['Cost'].str.replace('$', '').str.replace(',', '.') #1.000,23 seklinde . lar yok diye varsaydik
                         df['Cost'] = df['Cost'].astype(float)
                         df.to_pickle("./{}.pickle".format(name))
                     return redirect('/rapor_mp.html')
@@ -255,6 +257,10 @@ def kampanya():
 
         if kampanya_df.iloc[-1]['T'] == 1:
             flash('Kampanya süresi doldu!')
+
+        flash('Kalan Bütçe: ' + str(yeni_b))
+
+        flash('Ulaşılan Kitle Yüzde: ' + str(kampanya_df.iloc[-1]['Reach'] + (sonuc / AUDIENCE_SIZE)))
 
         kampanya_df = kampanya_df.append(pd.DataFrame({'Day': kampanya_df.iloc[-1]['Day'] + 1, 'B': yeni_b, 'T':  kampanya_df.iloc[-1]['T']-1, 'Bid': yeni_bid, 'P':  kampanya_df.iloc[-1]['P'], 'M': m, 'U': u, 'Reach': kampanya_df.iloc[-1]['Reach'] + (sonuc / AUDIENCE_SIZE)}, index=[0]), ignore_index=True)        
         print(kampanya_df)
