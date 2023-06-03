@@ -7,16 +7,16 @@ def exponential_effectiveness(x, m, u):
 def pareto_frontier_B_b(p, a, m, u, T, q):
     #tmin = np.log((a * p + 1) / (1 - p)) / (m * (1 + a))
     #B = ((-T/u) * np.log(1 - (tmin/T)))
-    B = (T/u)*np.log( m*u / (u * (m - (1/((1+a)*T))*np.log((((a+1)*(1-q)/(1-p))-a*(1-q) ) / (1+a*q))) ) )
+    B = (T/u)*np.log( m*u / (u * (m - (1/((1+a)*T))*np.log((((a+1)*(1-q)/(1-p))-a*(1-q) ) / (1+a*q)))))
     bid = new_bid(p, a, m, u, T, q)
 
     return B, bid
 
-def the_beta(p, a, m, u, T, q):
+def beta_func(p, a, m, u, T, q):
     return u * (m - 1/((1 + a) * T) * np.log((((a+1)*(1-q)/(1-p))-a*(1-q))/(1+a*q)) )
 
 def new_bid(p, a, m, u, T, q):
-    beta = the_beta(p, a, m, u, T, q)
+    beta = beta_func(p, a, m, u, T, q)
     bid = 1 / u * np.log(m * u / beta)
     return bid
 
@@ -201,8 +201,6 @@ def revenue_estimator(df, p, n, T, B, b):
         sum_temp = 0
     
     campaign_data = df[['Cost','active_users']].tail(T)
-    print("ananin amina koyayim")
-    print(campaign_data)
     campaign_data_norm = (campaign_data-campaign_data.min())/(campaign_data.max()-campaign_data.min())
     b = model.predict(campaign_data) # not using the normalized data, will be reviewed later
     b_unnorm = b*(y.max()-y.min()) + y.min()

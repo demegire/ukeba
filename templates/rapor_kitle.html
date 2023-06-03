@@ -1,0 +1,30 @@
+<!doctype html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">	
+    <head>
+        <meta charset="UTF-8">
+        <title>Teklif Stratejisi</title>
+        <link rel="stylesheet" href="../static/style.css">
+		<link href="https://unpkg.com/gridjs/dist/theme/mermaid.min.css" rel="stylesheet" />
+		<link rel="shortcut icon" href="#" />
+    </head>
+	 <body>
+	 	<div class="registercontent" align="center">
+			<div class="registertop">
+				<h1>Teklif Stratejisi Sayfası</h1>
+	  		</div>
+			<br>
+			<p><b><a href=homepage.html>Anasayfa</a></b></p>
+			<br>		
+			<p> {{ kitle }} </p>	
+			<br>
+			
+		</div>
+		<div id='chart2' class='chart'></div>
+	</body>
+	<script src='https://cdn.plot.ly/plotly-latest.min.js'></script>
+	<script type='text/javascript'>
+	var graphs2 = {{graphJSON2 | safe}};
+	Plotly.plot('chart2',graphs2,{});
+	</script>
+</html>

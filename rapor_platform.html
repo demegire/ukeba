@@ -1,0 +1,49 @@
+<!doctype html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+	
+    <head>
+        <meta charset="UTF-8">
+        <title>Teklif Stratejisi</title>
+        <link rel="stylesheet" href="../static/style.css">
+		<link href="https://unpkg.com/gridjs/dist/theme/mermaid.min.css" rel="stylesheet" />
+		<link rel="shortcut icon" href="#" />
+    </head>
+
+
+	 <body>
+	 	<div class="registercontent" align="center">
+			<div class="registertop">
+				<h1>Teklif Stratejisi Sayfası</h1>
+	  		</div>
+			<br>
+			<p><b><a href=homepage.html>Anasayfa</a></b></p>
+			<br>		
+			<p> {{ kitle }} </p>	
+			<br>
+			
+		</div>
+
+	  <div id='chart' class='chart'></div>
+	  <div id='chart2' class='chart'></div>
+	</body><script src='https://cdn.plot.ly/plotly-latest.min.js'></script>
+	<script type='text/javascript'>
+	var graphs = {{graphJSON | safe}};
+	Plotly.plot('chart',graphs,{});
+	var graphs2 = {{graphJSON2 | safe}};
+	Plotly.plot('chart2',graphs2,{});
+
+	chart2.on('plotly_click', function(data){
+		const bid = data.points[0].customdata[0];
+		const p = data.points[0].data.legendgroup;
+		const b = data.points[0].x;
+		const t = data.points[0].y;
+		const day = "1";
+		const m = {{m | safe}};
+		const u = {{u | safe}};
+
+		window.location.href = `http://localhost:5000/kampanya.html?t=${t}&b=${b}&bid=${bid}&p=${p}&day=${day}&m=${m}&u=${u}`;
+
+	});
+
+	</script></html>

@@ -1,5 +1,11 @@
+import warnings
+from pandas.core.common import SettingWithCopyWarning
+warnings.simplefilter(action='ignore', category=FutureWarning)
+warnings.simplefilter(action="ignore", category=SettingWithCopyWarning)
+
 from flask import Flask, flash, render_template, request, redirect, url_for, session
 from utils import exponential_effectiveness, new_bid, pareto_frontier_B_b, maximize_p1p2_sum, maximize_n1n2_sum, maximize_ltv1ltv2_sum, revenue_estimator
+from multi import multi_pareto_frontier_B_b
 from werkzeug.utils import secure_filename
 from matplotlib.figure import Figure
 from scipy.optimize import curve_fit
@@ -11,7 +17,7 @@ import os
 import plotly
 import plotly.express as px
 
-from constants import WORD_OF_MOUTH, INITIAL_EXPOSURE, ONLINE_LEARNING_N, AUDIENCE_SIZE, DECAY_RATE, P0
+from constants import WORD_OF_MOUTH, INITIAL_EXPOSURE, ONLINE_LEARNING_N, AUDIENCE_SIZE, DECAY_RATE, P0, META_AUDIENCE_SIZE, IRONSOURCE_AUDIENCE_SIZE
 
 UPLOAD_FOLDER = 'uploads'
 ALLOWED_EXTENSIONS = {'csv', 'pdf', 'xlsx'}
@@ -32,28 +38,22 @@ def default():
 def index():
     if request.method == 'POST':
     # check if the post request has the file part
-        if 'file' not in request.files:
-            flash('No file part')
+        if 'file' not in request.files and 'kitlefile' not in request.files and 'platformfile' not in request.files:
             return redirect(request.url)
-        file = request.files['file']
-        # If the user does not select a file, the browser submits an
-        # empty file without a filename.
-        if file.filename == '':
-            flash('No selected file')
-            return redirect(request.url)
-        if file and allowed_file(file.filename):
-            filename = secure_filename(file.filename)
-            file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
-            extension = filename.split('.')[-1]
+        
+        if request.files['file']:
+            file = request.files['file']
+            if file and allowed_file(file.filename):
+                filename = secure_filename(file.filename)
+                file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+                extension = filename.split('.')[-1]
 
-            if extension == 'csv':
-                df = pd.read_csv(os.path.join(app.config['UPLOAD_FOLDER'], filename))
-                df.to_pickle("./df.pickle")
-                return redirect('/rapor.html')
-            elif extension == 'xlsx':
-                xl = pd.ExcelFile(os.path.join(app.config['UPLOAD_FOLDER'], filename))
-                if len(xl.sheet_names) == 1:
-
+                if extension == 'csv':
+                    df = pd.read_csv(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+                    df.to_pickle("./df.pickle")
+                    return redirect('/rapor.html')
+                elif extension == 'xlsx':
+                    xl = pd.ExcelFile(os.path.join(app.config['UPLOAD_FOLDER'], filename))
                     df = pd.read_excel(os.path.join(app.config['UPLOAD_FOLDER'], filename))
                     df = df.rename(columns={'Unnamed: 0': 'Date'})
                     df = df[df['Date'].notna()]
@@ -61,19 +61,38 @@ def index():
                     df['Cost'] = df['Cost'].astype(float)
                     df.to_pickle("./df.pickle")
                     return redirect('/rapor.html')
-                else: # Install - Cost - Date columns are required in each sheet
-                    for name in xl.sheet_names:
-                        print('name')
-                        df = xl.parse(name)
-                        if 'Unnamed: 0' in df.columns:
-                            df = df.rename(columns={'Unnamed: 0': 'Date'})
-                            df = df[df['Date'].notna()]
-                            df['Cost'] = df['Cost'].str.replace('$', '').str.replace(',', '.') #1.000,23 seklinde . lar yok diye varsaydik
-                        df['Cost'] = df['Cost'].astype(float)
-                        df.to_pickle("./{}.pickle".format(name))
-                    return redirect('/rapor_mp.html')
+
+        if request.files['kitlefile']:
+            file = request.files['kitlefile']
+            if file and allowed_file(file.filename):
+                filename = secure_filename(file.filename)
+                file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+                xl = pd.ExcelFile(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+                for name in xl.sheet_names:
+                    df = xl.parse(name)
+                    if 'Unnamed: 0' in df.columns: # For Meta files
+                        df = df.rename(columns={'Unnamed: 0': 'Date'})
+                        df = df[df['Date'].notna()]
+                        df['Cost'] = df['Cost'].str.replace('$', '').str.replace(',', '.') #1.000,23 seklinde . lar yok diye varsaydik
+                    df['Cost'] = df['Cost'].astype(float)
+                    df.to_pickle("./{}.pickle".format(name))
+                return redirect('/rapor_kitle.html')        
             
-            session['messages'] = filename
+        if request.files['platformfile']:
+            file = request.files['platformfile']
+            if file and allowed_file(file.filename):
+                filename = secure_filename(file.filename)
+                file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+                xl = pd.ExcelFile(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+                for name in xl.sheet_names:
+                    df = xl.parse(name)
+                    if 'Unnamed: 0' in df.columns: # For Meta files
+                        df = df.rename(columns={'Unnamed: 0': 'Date'})
+                        df = df[df['Date'].notna()]
+                        df['Cost'] = df['Cost'].str.replace('$', '').str.replace(',', '.') #1.000,23 seklinde . lar yok diye varsaydik
+                    df['Cost'] = df['Cost'].astype(float)
+                    df.to_pickle("./{}.pickle".format(name))
+                return redirect('/rapor_platform.html') 
             
     return render_template("homepage.html")
     
@@ -81,7 +100,7 @@ def index():
 def rapor():
 
     def plot_px(df):
-        fig = px.line(df, x='Verilen İhale Değeri', y='Sonuç Yüzdesi', markers=True, color='Veri Kaynağı', title="Verilen İhale Değeri vs Sonuç Yüzdesi")
+        fig = px.line(df, x='Verilen İhale Değeri', y='Sonuç', markers=True, color='Veri Kaynağı', title="Verilen İhale Değeri vs Sonuç")
         graphJSON = json.dumps(fig, cls=plotly.utils.PlotlyJSONEncoder)
         
         return graphJSON
@@ -99,39 +118,38 @@ def rapor():
     df = df.sort_values(by=['Cost'])
     df['Verilen İhale Değeri'] = df['Cost'] 
     df['Sonuç Yüzdesi'] = df['Install'] / AUDIENCE_SIZE
+    df['Sonuç'] = df['Install']
 
     cum_ad_spend = np.array(df['Verilen İhale Değeri'], dtype='f')
     cum_result = np.array(df['Sonuç Yüzdesi'], dtype='f')
     df['Veri Kaynağı'] = 'Gerçek'
         
-    popt, _ = curve_fit(exponential_effectiveness, cum_ad_spend, cum_result, p0=P0, maxfev=5000)
-    gecici_df = pd.read_excel(os.path.join(app.config['UPLOAD_FOLDER'], 'toyshop_dailybreakdown_cells.xlsx'))
+    popt, pcov = curve_fit(exponential_effectiveness, cum_ad_spend, cum_result, p0=P0, maxfev=5000)
+    gecici_df = pd.read_excel(os.path.join(app.config['UPLOAD_FOLDER'], 'toyshop_dailybreakdown_cells.xlsx')) # Duzelt
     [m, u] = popt
     pareto_array = np.array([[p, t, *pareto_frontier_B_b(p, WORD_OF_MOUTH, m, u, t, INITIAL_EXPOSURE)] for p in [0.000001, 0.00001, 0.0001, 0.001, 0.01, 0.1, 0.02, 0.03, 0.04, 0.05] for t in np.linspace(1, 30, 30)])
-    # Identify rows with NaN values
     nan_rows = np.isnan(pareto_array).any(axis=1)
-    # Select rows without NaN values
     pareto_array = pareto_array[~nan_rows]
     profits = np.array([revenue_estimator(gecici_df, p, AUDIENCE_SIZE, int(t), B, b) for p, t, B, b in pareto_array])
-    pareto_df = pd.DataFrame({'P': pareto_array[:, 0], 'T': pareto_array[:, 1], 'B': pareto_array[:, 2], 'Bid': pareto_array[:, 3], 'Profit': profits})
+    pareto_df = pd.DataFrame({'P': (AUDIENCE_SIZE * pareto_array[:, 0]).astype(int), 'T': pareto_array[:, 1], 'B': np.around(pareto_array[:, 2], decimals=2), 'Bid': np.around(pareto_array[:, 3], decimals=2), 'Profit': np.around(profits, decimals=2)})
     pareto_df = pareto_df.dropna()
     
     for spend, reach in zip(cum_ad_spend, exponential_effectiveness(cum_ad_spend, *popt)):
-        df = df.append({'Verilen İhale Değeri': spend, 'Sonuç Yüzdesi': reach, 'Veri Kaynağı': 'Tahmin'}, ignore_index = True)
+        df = df.append({'Verilen İhale Değeri': spend, 'Sonuç': AUDIENCE_SIZE * reach, 'Veri Kaynağı': 'Tahmin'}, ignore_index = True)
+
+    ss_res = np.sum((cum_result - exponential_effectiveness(cum_ad_spend, *popt)) ** 2)
+    ss_tot = np.sum((cum_result - np.mean(cum_result)) ** 2)
+    r2 = 1 - (ss_res / ss_tot)
     
     graphJSON = plot_px(df)
     graphJSON2 = plot_pareto(pareto_df)    
 
-    return render_template('rapor.html', graphJSON=graphJSON, graphJSON2=graphJSON2, m=m, u=u, kitle='Hedef Kitledeki Kişi Sayısı: ' + str(AUDIENCE_SIZE))
+    return render_template('rapor.html', graphJSON=graphJSON, graphJSON2=graphJSON2, m=m, u=u, kitle='Etkililik Fonksiyonu R^2 Değeri: ' + str(r2))
 
+@app.route('/rapor_platform.html', methods =['GET', 'POST'])
+def rapor_platform():
 
-@app.route('/rapor_mp.html', methods =['GET', 'POST'])
-def rapor_mp():
-       
-    # uploaded data 1
-    
-    #df1 = pd.read_pickle("./df_1.pickle")  
-    df1 = pd.read_pickle("./Sayfa1.pickle") 
+    df1 = pd.read_pickle("./Meta.pickle") 
     
     df1 = df1.sort_values(by=['Cost'])
     df1['Verilen İhale Değeri'] = df1['Cost']
@@ -139,15 +157,10 @@ def rapor_mp():
 
     cum_ad_spend_1 = np.array(df1['Verilen İhale Değeri'], dtype='f')
     cum_result_1 = np.array(df1['Sonuç Yüzdesi'], dtype='f')
-    df1['Veri Kaynağı'] = 'Gerçek'
         
     popt_1, _ = curve_fit(exponential_effectiveness, cum_ad_spend_1, cum_result_1, p0=P0, maxfev=5000)
 
-
-    # uploaded data 2
-    
-    #df2 = pd.read_pickle("./df_2.pickle")  
-    df2 = pd.read_pickle("./Sheet2.pickle") 
+    df2 = pd.read_pickle("./Ironsource.pickle") 
     
     df2 = df2.sort_values(by=['Date'])
     df2['Verilen İhale Değeri'] = df2['Cost']
@@ -155,11 +168,8 @@ def rapor_mp():
 
     cum_ad_spend_2 = np.array(df2['Verilen İhale Değeri'], dtype='f')
     cum_result_2 = np.array(df2['Sonuç Yüzdesi'], dtype='f')
-    df2['Veri Kaynağı'] = 'Gerçek'
         
     popt_2, _ = curve_fit(exponential_effectiveness, cum_ad_spend_2, cum_result_2, p0=P0, maxfev=5000)
-
-    # solve models for percentage, reach, ltv maximization
 
     b_limit = 5000 # take as input later
     platform_pars_1 = [0.1, 400000, 19.28] # a,n,ltv - take as input
@@ -174,9 +184,59 @@ def rapor_mp():
     results = [p_results, reach_results, ltv_results]
     popts = [popt_1, popt_2]
 
-    return render_template('rapor_mp.html', kitle=results)
+    return render_template('rapor_platform.html')
 
 
+
+@app.route('/rapor_kitle.html', methods =['GET', 'POST'])
+def rapor_kitle():
+
+    def plot_pareto(df):
+        fig = px.line(df, x='B', y='T', color='P', markers=True, hover_data=['Bid Meta', 'Bid Ironsource'], title="B vs T vs P (Min B)")
+        graphJSON = json.dumps(fig, cls=plotly.utils.PlotlyJSONEncoder)
+        
+        return graphJSON
+           
+    df1 = pd.read_pickle("./Meta.pickle") 
+    
+    df1 = df1.sort_values(by=['Cost'])
+    df1['Verilen İhale Değeri'] = df1['Cost']
+    df1['Sonuç Yüzdesi'] = df1['Install'] / AUDIENCE_SIZE
+
+    cum_ad_spend_1 = np.array(df1['Verilen İhale Değeri'], dtype='f')
+    cum_result_1 = np.array(df1['Sonuç Yüzdesi'], dtype='f')
+        
+    popt_1, _ = curve_fit(exponential_effectiveness, cum_ad_spend_1, cum_result_1, p0=P0, maxfev=5000)
+    # Dogru fit etti mi, metrik dondur
+ 
+    df2 = pd.read_pickle("./Ironsource.pickle") 
+    
+    df2 = df2.sort_values(by=['Date'])
+    df2['Verilen İhale Değeri'] = df2['Cost']
+    df2['Sonuç Yüzdesi'] = df2['Install']  / AUDIENCE_SIZE
+
+    cum_ad_spend_2 = np.array(df2['Verilen İhale Değeri'], dtype='f')
+    cum_result_2 = np.array(df2['Sonuç Yüzdesi'], dtype='f')
+        
+    popt_2, _ = curve_fit(exponential_effectiveness, cum_ad_spend_2, cum_result_2, p0=P0, maxfev=5000)
+
+    p_vals = [0.0000001, 0.000001, 0.00001, 0.0001, 0.001, 0.01]
+    p_arr = [[p1, p2] for p1 in p_vals for p2 in p_vals]
+    m = [popt_1[0], popt_2[0]]
+    u = [popt_1[1], popt_2[1]]
+    a = [WORD_OF_MOUTH, WORD_OF_MOUTH]
+    q = [INITIAL_EXPOSURE, INITIAL_EXPOSURE]
+
+    pareto_array = np.array([[*p, t, *multi_pareto_frontier_B_b(p, a, m, u, t, q)] for p in p_arr for t in np.linspace(1, 30, 30)])
+    nan_rows = np.isnan(pareto_array).any(axis=1)
+    pareto_array = pareto_array[~nan_rows]
+    # Revenue ekle
+    combined_p = META_AUDIENCE_SIZE * pareto_array[:, 0] + IRONSOURCE_AUDIENCE_SIZE * pareto_array[:, 1]
+    pareto_df = pd.DataFrame({'P': combined_p.astype(int), 'T': pareto_array[:, 2], 'B': pareto_array[:, 3], 'Bid Meta': pareto_array[:, 4], 'Bid Ironsource': pareto_array[:, 5]})
+    pareto_df = pareto_df.dropna()
+    graphJSON2 = plot_pareto(pareto_df) 
+
+    return render_template('rapor_kitle.html', graphJSON2=graphJSON2)
 
 @app.route('/kampanya.html', methods =['GET', 'POST'])
 def kampanya():
