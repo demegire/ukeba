@@ -99,7 +99,7 @@ def maximize_ltv1ltv2_sum(platform_pars_1, m_u_1, platform_pars_2, m_u_2, b_limi
     b1_a = [pareto_frontier_B_b(p,platform_pars_1[0],m_u_1[0],m_u_1[1],T,q=0.1)[0] for p in np.linspace(0,1,sens)]
     b2_a = [pareto_frontier_B_b(p,platform_pars_2[0],m_u_2[0],m_u_2[1],T,q=0.1)[0] for p in np.linspace(0,1,sens)]
     
-    b1_array = np.column_stack((b1_a, platform_pars_2[2]*platform_pars_1[1]*np.linspace(0,1,sens)))
+    b1_array = np.column_stack((b1_a, platform_pars_1[2]*platform_pars_1[1]*np.linspace(0,1,sens)))
     b2_array = np.column_stack((b2_a, platform_pars_2[2]*platform_pars_2[1]*np.linspace(0,1,sens)))
     
     for b1 in range(len(b1_a)):
@@ -114,7 +114,17 @@ def maximize_ltv1ltv2_sum(platform_pars_1, m_u_1, platform_pars_2, m_u_2, b_limi
                 optimal_p2 = p2
                 opt_b1 = b1_array[b1][0]
                 opt_b2 = b2_array[b2][0]
-    return optimal_p1, optimal_p2, opt_b1, opt_b2, max_sum
+    
+    actual_p1 = optimal_p1/(platform_pars_1[2]*platform_pars_1[1])
+    actual_p2 = optimal_p2/(platform_pars_2[2]*platform_pars_2[1])
+    
+    actual_reach1 = optimal_p1/platform_pars_1[2]
+    actual_reach2 = optimal_p2/platform_pars_2[2]
+    
+    actual_ltv1 = optimal_p1
+    actual_ltv2 = optimal_p2
+    
+    return actual_p1, actual_p2, actual_reach1, actual_reach2, actual_ltv1, actual_ltv2, opt_b1, opt_b2, max_sum
 
 def b_calc(p, a, ms, T, ltv, n, disc):
     b1_a = [old_pareto_frontier(p,a,ms,T) for p in np.linspace(0,1,disc)]
