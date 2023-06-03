@@ -40,8 +40,7 @@ def index():
     # check if the post request has the file part
         if 'file' not in request.files and 'kitlefile' not in request.files and 'platformfile' not in request.files:
             return redirect(request.url)
-        
-        if request.files['file']:
+        if 'file' in request.files.keys():
             file = request.files['file']
             if file and allowed_file(file.filename):
                 filename = secure_filename(file.filename)
@@ -62,7 +61,7 @@ def index():
                     df.to_pickle("./df.pickle")
                     return redirect('/rapor.html')
 
-        if request.files['kitlefile']:
+        if 'kitlefile' in request.files.keys():
             file = request.files['kitlefile']
             if file and allowed_file(file.filename):
                 filename = secure_filename(file.filename)
@@ -78,7 +77,7 @@ def index():
                     df.to_pickle("./{}.pickle".format(name))
                 return redirect('/rapor_kitle.html')        
             
-        if request.files['platformfile']:
+        if 'platformfile' in request.files.keys():
             file = request.files['platformfile']
             if file and allowed_file(file.filename):
                 filename = secure_filename(file.filename)
