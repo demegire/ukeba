@@ -187,34 +187,60 @@ def rapor_platform():
 @app.route('/rapor_kitle.html', methods =['GET', 'POST'])
 def rapor_kitle():
 
+    def plot_px(df, platform):
+        fig = px.line(df, x='Verilen İhale Değeri', y='Sonuç', markers=True, color='Veri Kaynağı', title="{} için Verilen İhale Değeri vs Sonuç".format(platform))
+        graphJSON = json.dumps(fig, cls=plotly.utils.PlotlyJSONEncoder)
+        
+        return graphJSON
+
     def plot_pareto(df):
         fig = px.line(df, x='B', y='T', color='P', markers=True, hover_data=['Bid Meta', 'Bid Ironsource'], title="B vs T vs P (Min B)")
         graphJSON = json.dumps(fig, cls=plotly.utils.PlotlyJSONEncoder)
         
         return graphJSON
+    
+    kitle = ''
            
     df1 = pd.read_pickle("./Meta.pickle") 
     
     df1 = df1.sort_values(by=['Cost'])
     df1['Verilen İhale Değeri'] = df1['Cost']
     df1['Sonuç Yüzdesi'] = df1['Install'] / AUDIENCE_SIZE
+    df1['Sonuç'] = df1['Install']
+    df1['Veri Kaynağı'] = 'Gerçek'
 
     cum_ad_spend_1 = np.array(df1['Verilen İhale Değeri'], dtype='f')
     cum_result_1 = np.array(df1['Sonuç Yüzdesi'], dtype='f')
         
     popt_1, _ = curve_fit(exponential_effectiveness, cum_ad_spend_1, cum_result_1, p0=P0, maxfev=5000)
-    # Dogru fit etti mi, metrik dondur
+    for spend, reach in zip(cum_ad_spend_1, exponential_effectiveness(cum_ad_spend_1, *popt_1)):
+        df1 = df1.append({'Verilen İhale Değeri': spend, 'Sonuç': AUDIENCE_SIZE * reach, 'Veri Kaynağı': 'Tahmin'}, ignore_index = True)
+    effJSON1 = plot_px(df1, 'Meta')
+    ss_res = np.sum((cum_result_1 - exponential_effectiveness(cum_ad_spend_1, *popt_1)) ** 2)
+    ss_tot = np.sum((cum_result_1 - np.mean(cum_result_1)) ** 2)
+    r2 = 1 - (ss_res / ss_tot)
+    kitle += ('Meta Etkililik Fonksiyonu R^2 Değeri: ' + str(r2))
  
     df2 = pd.read_pickle("./Ironsource.pickle") 
     
-    df2 = df2.sort_values(by=['Date'])
+    df2 = df2.sort_values(by=['Cost'])
     df2['Verilen İhale Değeri'] = df2['Cost']
     df2['Sonuç Yüzdesi'] = df2['Install']  / AUDIENCE_SIZE
+    df2['Veri Kaynağı'] = 'Gerçek'
+    df2['Sonuç'] = df2['Install']
 
     cum_ad_spend_2 = np.array(df2['Verilen İhale Değeri'], dtype='f')
     cum_result_2 = np.array(df2['Sonuç Yüzdesi'], dtype='f')
         
     popt_2, _ = curve_fit(exponential_effectiveness, cum_ad_spend_2, cum_result_2, p0=P0, maxfev=5000)
+
+    for spend, reach in zip(cum_ad_spend_2, exponential_effectiveness(cum_ad_spend_2, *popt_2)):
+        df2 = df2.append({'Verilen İhale Değeri': spend, 'Sonuç': AUDIENCE_SIZE * reach, 'Veri Kaynağı': 'Tahmin'}, ignore_index = True)
+    effJSON2 = plot_px(df2, 'Ironsource')
+    ss_res = np.sum((cum_result_2 - exponential_effectiveness(cum_ad_spend_2, *popt_2)) ** 2)
+    ss_tot = np.sum((cum_result_2 - np.mean(cum_result_2)) ** 2)
+    r2 = 1 - (ss_res / ss_tot)
+    kitle += ('\n\nIronsource Etkililik Fonksiyonu R^2 Değeri: ' + str(r2))
 
     p_vals = [0.0000001, 0.000001, 0.00001, 0.0001, 0.001, 0.01]
     p_arr = [[p1, p2] for p1 in p_vals for p2 in p_vals]
@@ -232,7 +258,7 @@ def rapor_kitle():
     pareto_df = pareto_df.dropna()
     graphJSON2 = plot_pareto(pareto_df) 
 
-    return render_template('rapor_kitle.html', graphJSON2=graphJSON2)
+    return render_template('rapor_kitle.html', graphJSON2=graphJSON2, effJSON1=effJSON1, effJSON2=effJSON2, kitle=kitle)
 
 @app.route('/kampanya.html', methods =['GET', 'POST'])
 def kampanya():
@@ -315,6 +341,14 @@ def kampanya():
         flash('Lütfen formu doldurun')
 
     return render_template('kampanya.html', yeni_bid=yeni_bid)
+
+@app.route('/kampanya_platform.html', methods =['GET', 'POST'])
+def kampanya_platform():
+    return
+
+@app.route('/kampanya_kitle.html', methods =['GET', 'POST'])
+def kampanya_kitle():
+    return
     
 if __name__ == "__main__":
     app.run(debug=True)
