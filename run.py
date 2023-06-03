@@ -175,14 +175,33 @@ def rapor_platform():
     platform_pars_2 = [2, 2500, 6.06]
     m_u_2 = popt_2
     
-    p_results = maximize_p1p2_sum(platform_pars_1, m_u_1, platform_pars_2, m_u_2, b_limit=b_limit)
-    reach_results = maximize_n1n2_sum(platform_pars_1, m_u_1, platform_pars_2, m_u_2, b_limit=b_limit)
-    ltv_results = maximize_ltv1ltv2_sum(platform_pars_1, m_u_1, platform_pars_2, m_u_2, b_limit=b_limit)
-    
-    results = [p_results, reach_results, ltv_results]
-    popts = [popt_1, popt_2]
+    ltv_results = maximize_ltv1ltv2_sum(platform_pars_1, m_u_1, platform_pars_2, m_u_2, b_limit=b_limit)    
 
-    return render_template('rapor_platform.html')
+    data = {
+    'budget_allocated': [B1, B2],
+    'exposure_percentage': [p1, p2],
+    'exposed_population': [h1*p1, h2*p2],
+    'names_platform': ['Meta', 'Ironsource'],
+    'unexposed_population': [h1*(1-p1), h2*(1-p2)],
+    'platform_1_exposed_unexposed':[h1*p1, h1*(1-p1)],
+    'platform_2_exposed_unexposed':[h2*p2, h2*(1-p2)],
+    'names_exposure': ['Exposed Population', 'Unexposed Population']
+    }
+
+    df = pd.DataFrame(data)
+
+    fig = px.pie(df, values='budget_allocated', names='names_platform', title='Budgets to be allocated')
+    budgetJSON = json.dumps(fig, cls=plotly.utils.PlotlyJSONEncoder)
+
+    # Pie for exposure in platform 1
+    fig = px.pie(df, values='platform_1_exposed_unexposed', names='names_exposure', title='Meta')
+    graphJSON1 = json.dumps(fig, cls=plotly.utils.PlotlyJSONEncoder)
+
+    # Pie for exposure in platform 2
+    fig = px.pie(df, values='platform_2_exposed_unexposed', names='names_exposure', title='Ironsource')
+    graphJSON2 = json.dumps(fig, cls=plotly.utils.PlotlyJSONEncoder)
+
+    return render_template('rapor_platform.html', budgetJSON=budgetJSON, graphJSON1=graphJSON1, graphJSON2=graphJSON2)
 
 @app.route('/rapor_kitle.html', methods =['GET', 'POST'])
 def rapor_kitle():
