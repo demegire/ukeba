@@ -148,7 +148,6 @@ def rapor():
 
 @app.route('/rapor_platform.html', methods =['GET', 'POST'])
 def rapor_platform():
-
     df1 = pd.read_pickle("./Meta.pickle") 
     
     df1 = df1.sort_values(by=['Cost'])
@@ -185,8 +184,6 @@ def rapor_platform():
     popts = [popt_1, popt_2]
 
     return render_template('rapor_platform.html')
-
-
 
 @app.route('/rapor_kitle.html', methods =['GET', 'POST'])
 def rapor_kitle():
@@ -258,22 +255,16 @@ def kampanya():
         for i in range(len(df)):
             new_entry = pd.DataFrame({'Date': df2['Date'].iloc[i], 'Day': 0, 'B': 0, 'T': 0, 'Bid': df2['Cost'].iloc[i], 'P': 0, 'M': 0, 'U': 0, 'Reach':  df2['Install'].iloc[i] / AUDIENCE_SIZE}, index=[0])            
             kampanya_df = kampanya_df.append(new_entry, ignore_index=True)
-        kampanya_df = kampanya_df.append(pd.DataFrame({'Day': int(day), 'B': float(b), 'T': int(t), 'Bid': float(bid), 'P': float(p), 'M': float(m), 'U':float(u), 'Reach':0},  index=[0]), ignore_index=True)
+        kampanya_df = kampanya_df.append(pd.DataFrame({'Day': int(day), 'B': float(b), 'T': int(t), 'Bid': float(bid), 'P': float(p) / AUDIENCE_SIZE, 'M': float(m), 'U':float(u), 'Reach':0},  index=[0]), ignore_index=True)
         kampanya_df.to_pickle("./kampanya_df.pickle")
+
+        flash('Kampanya Günü: ' + str(kampanya_df.iloc[-1]['T']))
+        flash('Kalan Bütçe: ' + str(kampanya_df.iloc[-1]['B']))
+        flash('Sonuç: ' + str(kampanya_df.iloc[-1]['Reach'] * AUDIENCE_SIZE))
              
     kampanya_df = pd.read_pickle("./kampanya_df.pickle")
-
-    print('AAAAAAAAAAAAAA')
     
-    print(kampanya_df) # Fix
-
     yeni_bid = 0
-
-    flash('Kampanya Günü: ' + str(kampanya_df.iloc[-1]['T']))
-
-    flash('Kalan Bütçe: ' + str(kampanya_df.iloc[-1]['B']))
-
-    flash('Ulaşılan Kitle Oranı: ' + str(kampanya_df.iloc[-1]['Reach']))
 
     if request.method == 'POST' and  request.form['Dün Harcanılan Para'] and request.form['Dün Alınan Sonuç']:
         
@@ -314,6 +305,11 @@ def kampanya():
             flash('Kampanya süresi doldu!')
 
         kampanya_df = kampanya_df.append(pd.DataFrame({'Day': kampanya_df.iloc[-1]['Day'] + 1, 'B': yeni_b, 'T':  kampanya_df.iloc[-1]['T']-1, 'Bid': yeni_bid, 'P':  kampanya_df.iloc[-1]['P'], 'M': m, 'U': u, 'Reach': kampanya_df.iloc[-1]['Reach'] + (sonuc / AUDIENCE_SIZE)}, index=[0]), ignore_index=True)        
+        
+        flash('Kampanya Günü: ' + str(kampanya_df.iloc[-1]['T']))
+        flash('Kalan Bütçe: ' + str(kampanya_df.iloc[-1]['B']))
+        flash('Sonuç: ' + str(kampanya_df.iloc[-1]['Reach'] * AUDIENCE_SIZE))
+        
         kampanya_df.to_pickle("./kampanya_df.pickle")
         
     elif request.method == 'POST':
