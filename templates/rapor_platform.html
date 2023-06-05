@@ -37,6 +37,7 @@
 	  <div id='pie' class='chart'></div>
 	  <div id='chart' class='chart'></div>
 	  <div id='chart2' class='chart'></div>
+	  <div id='chart3' class='chart'></div>
 	</body><script src='https://cdn.plot.ly/plotly-latest.min.js'></script>
 	<script type='text/javascript'>
 	var pie = {{budgetJSON | safe}};
@@ -45,5 +46,7 @@
 	Plotly.plot('chart',graphs,{});
 	var graphs2 = {{graphJSON2 | safe}};
 	Plotly.plot('chart2',graphs2,{});
+	var graphs3 = {{graphJSON3 | safe}};
+	Plotly.plot('chart3',graphs3,{});
 
 	</script></html>

@@ -18,7 +18,7 @@ import os
 import plotly
 import plotly.express as px
 
-from constants import WORD_OF_MOUTH, INITIAL_EXPOSURE, ONLINE_LEARNING_N, AUDIENCE_SIZE, DECAY_RATE, P0, META_AUDIENCE_SIZE, IRONSOURCE_AUDIENCE_SIZE
+from constants import WORD_OF_MOUTH, INITIAL_EXPOSURE, ONLINE_LEARNING_N, AUDIENCE_SIZE, DECAY_RATE, P0, META_AUDIENCE_SIZE, IRONSOURCE_AUDIENCE_SIZE, IRONSOURCE_LTV, META_LTV
 
 UPLOAD_FOLDER = 'uploads'
 ALLOWED_EXTENSIONS = {'csv', 'pdf', 'xlsx'}
@@ -183,32 +183,35 @@ def rapor_platform():
         
         ltv_results = maximize_ltv1ltv2_sum(platform_pars_1, m_u_1, platform_pars_2, m_u_2, b_limit=b_limit)    
         
-        p1, p2, h1, h2, _, _, B1, B2, _ = ltv_results
+        p1, p2, h1, h2, ltv1, ltv2, B1, B2, ltv_total = ltv_results
+        
         data = {
         'budget_allocated': [B1, B2],
         'exposure_percentage': [p1, p2],
-        'exposed_population': [h1*p1, h2*p2],
-        'names_platform': ['Meta', 'Ironsource'],
-        'unexposed_population': [h1*(1-p1), h2*(1-p2)],
-        'platform_1_exposed_unexposed':[h1*p1, h1*(1-p1)],
-        'platform_2_exposed_unexposed':[h2*p2, h2*(1-p2)],
-        'names_exposure': ['Exposed Population', 'Unexposed Population']
+        'exposed_population': [h1, h2],
+        'ltvs': [ltv1, ltv2],
+        'names': ['Meta', 'Ironsource']
         }
 
-        df = pd.DataFrame(data)
-
-        fig = px.pie(df, values='budget_allocated', names='names_platform', title='Budgets to be allocated')
+        df = pd.DataFrame(data))
+        
+        fig = px.pie(df, values='budget_allocated', names='names', title='Allocated budgets')
+            
         budgetJSON = json.dumps(fig, cls=plotly.utils.PlotlyJSONEncoder)
 
-        # Pie for exposure in platform 1
-        fig = px.pie(df, values='platform_1_exposed_unexposed', names='names_exposure', title='Meta')
+        # Bar for exposure percentage comparison
+        fig = px.bar(df, x='exposure_percentage', y='names', color='names', title='Exposed Percentage Comparison')
         graphJSON1 = json.dumps(fig, cls=plotly.utils.PlotlyJSONEncoder)
-
-        # Pie for exposure in platform 2
-        fig = px.pie(df, values='platform_2_exposed_unexposed', names='names_exposure', title='Ironsource')
+            
+        # Bar for exposure percentage comparison
+        fig = px.bar(df, x='exposed_population', y='names', color='names', title='Exposed Population Comparison')
         graphJSON2 = json.dumps(fig, cls=plotly.utils.PlotlyJSONEncoder)
 
-    return render_template('rapor_platform.html', budgetJSON=budgetJSON, graphJSON1=graphJSON1, graphJSON2=graphJSON2)
+        # Bar for estimated LTV comparison
+        fig = px.bar(df, x='ltvs', y='names', color='names', title='Estimated LTV Comparison')
+        graphJSON3 = json.dumps(fig, cls=plotly.utils.PlotlyJSONEncoder)
+
+    return render_template('rapor_platform.html', budgetJSON=budgetJSON, graphJSON1=graphJSON1, graphJSON2=graphJSON2, graphJSON3=graphJSON3)
 
 @app.route('/rapor_kitle.html', methods =['GET', 'POST'])
 def rapor_kitle():
