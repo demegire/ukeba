@@ -4,7 +4,7 @@
 	
     <head>
         <meta charset="UTF-8">
-        <title>Reklam Kampanyası</title>
+        <title>Çoklu Kitle Reklam Kampanyası</title>
         <link rel="stylesheet" href="../static/style.css">
 		<link href="https://unpkg.com/gridjs/dist/theme/mermaid.min.css" rel="stylesheet" />
 		<link rel="shortcut icon" href="#" />
@@ -14,21 +14,25 @@
 	 <body>
 	 	<div class="registercontent" align="center">
 			<div class="registertop">
-				<h1>Reklam Kampanyası</h1>
+				<h1>Çoklu Kitle Reklam Kampanyası</h1>
 	  		</div>
 			<br>
 			<p><b><a href=homepage.html>Anasayfa</a></b></p>
 			<b></b>
-            <p><b><a href=rapor.html>Kampanya Seçimi</a></b></p>
+            <p><b><a href=rapor_kitle.html>Kampanya Seçimi</a></b></p>
 			<b></b>
 			<br>
 			<div class="registerbottom">
-				<form action="{{ url_for('kampanya')}}" method="post" autocomplete="off">
-                <label for="Dün Harcanılan Para">Önceki Gün Harcanan Para: </label>
-                <input type="text" id="Dün Harcanılan Para" name="Dün Harcanılan Para"><br><br>
-                <label for="Dün Alınan Sonuç">Önceki Gün Alınan Sonuç: </label>
-                <input type="text" id="Dün Alınan Sonuç" name="Dün Alınan Sonuç"><br><br>
-				<input type="submit" class="btn" value="Yeni İhale Değeri Üret"></br></br>			
+				<form action="{{ url_for('kampanya_kitle')}}" method="post" autocomplete="off">
+                <label for="Kitle 1 Dün Harcanılan Para">Kitle 1 Önceki Gün Harcanan Para: </label>
+                <input type="text" id="Kitle 1 Dün Harcanılan Para" name="Kitle 1 Dün Harcanılan Para"><br><br>
+                <label for="Kitle 1 Dün Alınan Sonuç">Kitle 1 Önceki Gün Alınan Sonuç: </label>
+                <input type="text" id="Kitle 1 Dün Alınan Sonuç" name="Kitle 1 Dün Alınan Sonuç"><br><br>
+                <label for="Kitle 2 Dün Harcanılan Para">Kitle 2 Önceki Gün Harcanan Para: </label>
+                <input type="text" id="Kitle 2 Dün Harcanılan Para" name="Kitle 2 Dün Harcanılan Para"><br><br>
+                <label for="Kitle 2 Dün Alınan Sonuç">Kitle 2 Önceki Gün Alınan Sonuç: </label>
+                <input type="text" id="Kitle 2 Dün Alınan Sonuç" name="Kitle 2 Dün Alınan Sonuç"><br><br>
+                <input type="submit" class="btn" value="Yeni İhale Değerleri Üret"></br></br>			
 				</form>
 			</div>
 			{% with messages = get_flashed_messages() %}

@@ -4,7 +4,7 @@
 	
     <head>
         <meta charset="UTF-8">
-        <title>Teklif Stratejisi</title>
+        <title>Çoklu Platform Kampanya Oluşturma</title>
         <link rel="stylesheet" href="../static/style.css">
 		<link href="https://unpkg.com/gridjs/dist/theme/mermaid.min.css" rel="stylesheet" />
 		<link rel="shortcut icon" href="#" />
@@ -14,13 +14,24 @@
 	 <body>
 	 	<div class="registercontent" align="center">
 			<div class="registertop">
-				<h1>Teklif Stratejisi Sayfası</h1>
+				<h1>Çoklu Platform Kampanya Oluşturma</h1>
 	  		</div>
 			<br>
 			<p><b><a href=homepage.html>Anasayfa</a></b></p>
 			<br>		
 			<p> {{ kitle }} </p>	
 			<br>
+			<div class="registerbottom">
+				<form action="{{ url_for('rapor_platform')}}" method="post" autocomplete="off">
+                <label for="Bütçe">Toplam Kampanya Bütçesi: </label>
+                <input type="text" id="Bütçe" name="Bütçe"><br><br>
+                <label for="Meta Gelir Çarpanı">Meta Gelir Çarpanı </label>
+                <input type="text" id="Meta Gelir Çarpanı" name="Meta Gelir Çarpanı"><br><br>
+                <label for="Ironsource Gelir Çarpanı">Ironsource Gelir Çarpanı </label>
+                <input type="text" id="Ironsource Gelir Çarpanı" name="Ironsource Gelir Çarpanı"><br><br>
+				<input type="submit" class="btn" value="Bütçeyi Dağıt"></br></br>			
+				</form>
+			</div>
 			
 		</div>
 	  <div id='pie' class='chart'></div>

@@ -3,7 +3,7 @@
 <html xmlns="http://www.w3.org/1999/xhtml">	
     <head>
         <meta charset="UTF-8">
-        <title>Teklif Stratejisi</title>
+        <title>Çoklu Kitle Kampanya Oluşturma</title>
         <link rel="stylesheet" href="../static/style.css">
 		<link href="https://unpkg.com/gridjs/dist/theme/mermaid.min.css" rel="stylesheet" />
 		<link rel="shortcut icon" href="#" />
@@ -11,14 +11,13 @@
 	 <body>
 	 	<div class="registercontent" align="center">
 			<div class="registertop">
-				<h1>Teklif Stratejisi Sayfası</h1>
+				<h1>Çoklu Kitle Kampanya Oluşturma</h1>
 	  		</div>
 			<br>
 			<p><b><a href=homepage.html>Anasayfa</a></b></p>
 			<br>		
 			<p style="white-space: pre-line"> {{ kitle }} </p>	
 			<br>
-			
 		</div>
 		<div id='effchart' class='chart'></div>
 		<div id='effchart2' class='chart'></div>
@@ -32,5 +31,22 @@
 	Plotly.plot('effchart',effgraph1,{});
 	var effgraph2 = {{effJSON2 | safe}};
 	Plotly.plot('effchart2',effgraph2,{});
+
+	chart2.on('plotly_click', function(data){
+		const bid_meta = data.points[0].customdata[0];
+		const bid_iron = data.points[0].customdata[1];
+		const p_iron = data.points[0].customdata[2];
+		const p_meta = data.points[0].customdata[3];
+		const p = data.points[0].data.legendgroup;
+		const b = data.points[0].x;
+		const t = data.points[0].y;
+		const day = "1";
+		const m = {{m | safe}};
+		const u = {{u | safe}};
+
+		window.location.href = `http://localhost:5000/kampanya_kitle.html?t=${t}&b=${b}&bid_meta=${bid_meta}&bid_iron=${bid_iron}&p_iron=${p_iron}&p_meta=${p_meta}&day=${day}&m=${m}&u=${u}`;
+
+	});
+
 	</script>
 </html>
