@@ -176,17 +176,22 @@ def rapor_platform():
     m_u_2 = popt_2
     
     ltv_results = maximize_ltv1ltv2_sum(platform_pars_1, m_u_1, platform_pars_2, m_u_2, b_limit=b_limit)    
+    
+    #  return actual_p1, actual_p2, actual_reach1, actual_reach2, actual_ltv1, actual_ltv2, opt_b1, opt_b2, max_sum
 
+    names_pl = ['Meta', 'Ironsource']
+    p1, p2, h1, h2, _, _, B1, B2, _ = ltv_results
     data = {
     'budget_allocated': [B1, B2],
     'exposure_percentage': [p1, p2],
     'exposed_population': [h1*p1, h2*p2],
-    'names_platform': ['Meta', 'Ironsource'],
+    'names_platform': names_pl,
     'unexposed_population': [h1*(1-p1), h2*(1-p2)],
     'platform_1_exposed_unexposed':[h1*p1, h1*(1-p1)],
     'platform_2_exposed_unexposed':[h2*p2, h2*(1-p2)],
     'names_exposure': ['Exposed Population', 'Unexposed Population']
-    }
+       
+}
 
     df = pd.DataFrame(data)
 
