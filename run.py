@@ -17,7 +17,7 @@ import os
 import plotly
 import plotly.express as px
 
-from constants import WORD_OF_MOUTH, INITIAL_EXPOSURE, ONLINE_LEARNING_N, AUDIENCE_SIZE, DECAY_RATE, P0, META_AUDIENCE_SIZE, IRONSOURCE_AUDIENCE_SIZE
+from constants import WORD_OF_MOUTH, INITIAL_EXPOSURE, ONLINE_LEARNING_N, AUDIENCE_SIZE, DECAY_RATE, P0, META_AUDIENCE_SIZE, IRONSOURCE_AUDIENCE_SIZE, IRONSOURCE_LTV, META_LTV
 
 UPLOAD_FOLDER = 'uploads'
 ALLOWED_EXTENSIONS = {'csv', 'pdf', 'xlsx'}
@@ -158,6 +158,7 @@ def rapor_platform():
         
     popt_1, _ = curve_fit(exponential_effectiveness, cum_ad_spend_1, cum_result_1, p0=P0, maxfev=5000)
 
+
     df2 = pd.read_pickle("./Ironsource.pickle") 
     
     df2 = df2.sort_values(by=['Date'])
@@ -169,18 +170,26 @@ def rapor_platform():
         
     popt_2, _ = curve_fit(exponential_effectiveness, cum_ad_spend_2, cum_result_2, p0=P0, maxfev=5000)
 
+    
+        
+    #popt_2, _ = curve_fit(exponential_effectiveness, cum_ad_spend_1, cum_result_1, p0=P0, maxfev=5000)
+
     b_limit = 5000 # take as input later
-    platform_pars_1 = [0.1, 400000, 19.28] # a,n,ltv - take as input
+    platform_pars_1 = [WORD_OF_MOUTH, META_AUDIENCE_SIZE, META_LTV] # a,n,ltv - take as input
     m_u_1 = popt_1
-    platform_pars_2 = [2, 2500, 6.06]
+    platform_pars_2 = [WORD_OF_MOUTH, IRONSOURCE_AUDIENCE_SIZE, IRONSOURCE_LTV]
     m_u_2 = popt_2
     
-    ltv_results = maximize_ltv1ltv2_sum(platform_pars_1, m_u_1, platform_pars_2, m_u_2, b_limit=b_limit)    
+    ltv_results = maximize_ltv1ltv2_sum(platform_pars_1, m_u_1, platform_pars_2, m_u_2, b_limit=b_limit)  
+    
+    print('=====================================')
+    print(ltv_results)
+    print("=====================================")
     
     #  return actual_p1, actual_p2, actual_reach1, actual_reach2, actual_ltv1, actual_ltv2, opt_b1, opt_b2, max_sum
 
     names_pl = ['Meta', 'Ironsource']
-    p1, p2, h1, h2, _, _, B1, B2, _ = ltv_results
+    p1, p2, h1, h2, ltv1, ltv2, B1, B2, ltv_total = ltv_results
     data = {
     'budget_allocated': [B1, B2],
     'exposure_percentage': [p1, p2],
@@ -191,22 +200,45 @@ def rapor_platform():
     'platform_2_exposed_unexposed':[h2*p2, h2*(1-p2)],
     'names_exposure': ['Exposed Population', 'Unexposed Population']
        
-}
+    }
+    
+    data2 = {
+    'budget_allocated': [B1, B2],
+    'exposure_percentage': [p1, p2],
+    'exposed_population': [h1, h2],
+    'ltvs': [ltv1, ltv2],
+    'names': ['Meta', 'Ironsource']
+    }
 
-    df = pd.DataFrame(data)
+    df = pd.DataFrame(data2)
 
-    fig = px.pie(df, values='budget_allocated', names='names_platform', title='Budgets to be allocated')
+    fig = px.pie(df, values='budget_allocated', names='names', title='Allocated budgets')
     budgetJSON = json.dumps(fig, cls=plotly.utils.PlotlyJSONEncoder)
+    
+    # Bar for exposure percentage comparison
+    fig = px.bar(df, x='exposure_percentage', y='names', color='names', title='Exposed Percentage Comparison')
+    graphJSON1 = json.dumps(fig, cls=plotly.utils.PlotlyJSONEncoder)
+        
+    # Bar for exposure percentage comparison
+    fig = px.bar(df, x='exposed_population', y='names', color='names', title='Exposed Population Comparison')
+    graphJSON2 = json.dumps(fig, cls=plotly.utils.PlotlyJSONEncoder)
+    
+    # Bar for estimated LTV comparison
+    fig = px.bar(df, x='ltvs', y='names', color='names', title='Estimated LTV Comparison')
+    graphJSON3 = json.dumps(fig, cls=plotly.utils.PlotlyJSONEncoder)
 
+    """
     # Pie for exposure in platform 1
     fig = px.pie(df, values='platform_1_exposed_unexposed', names='names_exposure', title='Meta')
     graphJSON1 = json.dumps(fig, cls=plotly.utils.PlotlyJSONEncoder)
 
+    
     # Pie for exposure in platform 2
     fig = px.pie(df, values='platform_2_exposed_unexposed', names='names_exposure', title='Ironsource')
     graphJSON2 = json.dumps(fig, cls=plotly.utils.PlotlyJSONEncoder)
+    """
 
-    return render_template('rapor_platform.html', budgetJSON=budgetJSON, graphJSON1=graphJSON1, graphJSON2=graphJSON2)
+    return render_template('rapor_platform.html', budgetJSON=budgetJSON, graphJSON1=graphJSON1, graphJSON2=graphJSON2, graphJSON3=graphJSON3)
 
 @app.route('/rapor_kitle.html', methods =['GET', 'POST'])
 def rapor_kitle():

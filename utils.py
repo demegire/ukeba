@@ -7,7 +7,8 @@ def exponential_effectiveness(x, m, u):
 def pareto_frontier_B_b(p, a, m, u, T, q):
     #tmin = np.log((a * p + 1) / (1 - p)) / (m * (1 + a))
     #B = ((-T/u) * np.log(1 - (tmin/T)))
-    B = (T/u)*np.log( m*u / (u * (m - (1/((1+a)*T))*np.log((((a+1)*(1-q)/(1-p))-a*(1-q) ) / (1+a*q)))))
+    
+    B = (T/u)*np.log( m*u / (u * (m - (1/((1+a)*T))*np.log((((a+1)*(1-q)/(1-p+1e-10))-a*(1-q) ) / (1+a*q)))))
     bid = new_bid(p, a, m, u, T, q)
 
     return B, bid
@@ -62,15 +63,15 @@ def maximize_p1p2_sum(platform_pars_1, m_u_1, platform_pars_2, m_u_2, b_limit, T
                 opt_b2 = b2_array[b2][0]
     return optimal_p1, optimal_p2, opt_b1, opt_b2, max_sum
 
-def maximize_n1n2_sum(platform_pars_1, m_u_1, platform_pars_2, m_u_2, b_limit, T=10, sens=10):
+def maximize_n1n2_sum(platform_pars_1, m_u_1, platform_pars_2, m_u_2, b_limit, T=16, sens=10):
     max_sum = -1
     optimal_p1 = -1
     optimal_p2 = -1
     opt_b1 = -1
     opt_b2 = -1
     
-    b1_a = [pareto_frontier_B_b(p,platform_pars_1[0],m_u_1[0],m_u_1[1],T,q=0.1)[0] for p in np.linspace(0,1,sens)]
-    b2_a = [pareto_frontier_B_b(p,platform_pars_2[0],m_u_2[0],m_u_2[1],T,q=0.1)[0] for p in np.linspace(0,1,sens)]
+    b1_a = [pareto_frontier_B_b(p,platform_pars_1[0],m_u_1[0],m_u_1[1],T,q=0)[0] for p in np.linspace(0,1,sens)]
+    b2_a = [pareto_frontier_B_b(p,platform_pars_2[0],m_u_2[0],m_u_2[1],T,q=0)[0] for p in np.linspace(0,1,sens)]
     
     b1_array = np.column_stack((b1_a, platform_pars_1[1]*np.linspace(0,1,sens)))
     b2_array = np.column_stack((b2_a, platform_pars_2[1]*np.linspace(0,1,sens)))
@@ -89,18 +90,32 @@ def maximize_n1n2_sum(platform_pars_1, m_u_1, platform_pars_2, m_u_2, b_limit, T
                 opt_b2 = b2_array[b2][0]
     return optimal_p1, optimal_p2, opt_b1, opt_b2, max_sum
 
-def maximize_ltv1ltv2_sum(platform_pars_1, m_u_1, platform_pars_2, m_u_2, b_limit, T=10, sens=10):
+def maximize_ltv1ltv2_sum(platform_pars_1, m_u_1, platform_pars_2, m_u_2, b_limit, T=10, sens=100):
     max_sum = -1
     optimal_p1 = -1
     optimal_p2 = -1
     opt_b1 = -1
     opt_b2 = -1
+    current_sum = -1
+    p_vals = [0.0000001, 0.000001, 0.00001, 0.0001, 0.001, 0.01]
     
-    b1_a = [pareto_frontier_B_b(p,platform_pars_1[0],m_u_1[0],m_u_1[1],T,q=0.1)[0] for p in np.linspace(0,1,sens)]
-    b2_a = [pareto_frontier_B_b(p,platform_pars_2[0],m_u_2[0],m_u_2[1],T,q=0.1)[0] for p in np.linspace(0,1,sens)]
     
-    b1_array = np.column_stack((b1_a, platform_pars_1[2]*platform_pars_1[1]*np.linspace(0,1,sens)))
-    b2_array = np.column_stack((b2_a, platform_pars_2[2]*platform_pars_2[1]*np.linspace(0,1,sens)))
+    
+    p_vals_to_ltv1 = [0.0000001, 0.000001, 0.00001, 0.0001, 0.001, 0.01]
+    p_vals_to_ltv2 = [0.0000001, 0.000001, 0.00001, 0.0001, 0.001, 0.01]
+    
+    for pp in range(len(p_vals)):
+        p_vals_to_ltv1[pp] = platform_pars_1[2]*platform_pars_1[1]*p_vals[pp]
+    
+    for pp in range(len(p_vals)):
+        p_vals_to_ltv2[pp] = platform_pars_2[2]*platform_pars_2[1]*p_vals[pp]
+    
+    
+    b1_a = [pareto_frontier_B_b(p,platform_pars_1[0],m_u_1[0],m_u_1[1],T,q=0)[0] for p in p_vals]
+    b2_a = [pareto_frontier_B_b(p,platform_pars_2[0],m_u_2[0],m_u_2[1],T,q=0)[0] for p in p_vals]
+    
+    b1_array = np.column_stack((b1_a, p_vals_to_ltv1))
+    b2_array = np.column_stack((b2_a, p_vals_to_ltv2))
     
     for b1 in range(len(b1_a)):
         for b2 in range(len(b2_a)):
@@ -124,7 +139,9 @@ def maximize_ltv1ltv2_sum(platform_pars_1, m_u_1, platform_pars_2, m_u_2, b_limi
     actual_ltv1 = optimal_p1
     actual_ltv2 = optimal_p2
     
-    return actual_p1, actual_p2, actual_reach1, actual_reach2, actual_ltv1, actual_ltv2, opt_b1, opt_b2, max_sum
+
+    
+    return actual_p1, actual_p2, actual_reach1, actual_reach2, actual_ltv1, actual_ltv2, opt_b1, opt_b2, max_sum, 
 
 def b_calc(p, a, ms, T, ltv, n, disc):
     b1_a = [old_pareto_frontier(p,a,ms,T) for p in np.linspace(0,1,disc)]
