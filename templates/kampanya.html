@@ -50,10 +50,10 @@
 			const tableDiv = document.getElementById('table');
 							
 			new gridjs.Grid({
-				columns: ['Gün', 'Ulaşılan Kitle (%)', 'Harcanılan Para'],
+				columns: ['Gün', 'Ulaşılan Toplam Kişi Sayısı', 'Günlük Bütçe'],
 				sort: {enabled: true, multiColumn: true},		  
 				data: {{ table_data }},
-				width: '90%'
+				width: '60%'
 			}).render(tableDiv);
 		
 		</script>

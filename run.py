@@ -107,7 +107,7 @@ def rapor():
         return graphJSON
     
     def plot_pareto(df):
-        fig = px.line(df, x='B', y='T', markers=True, color='P', hover_data=['Bid', 'Profit'], title="B vs T vs P (Min B)")
+        fig = px.line(df, x='B', y='T', markers=True, color='P', hover_data=['Bid', 'Profit'], title="Farklı Bütçe, Uzunluk ve İndirme Sayıları için Kampanya Senaryoları")
         graphJSON = json.dumps(fig, cls=plotly.utils.PlotlyJSONEncoder)
         
         return graphJSON
@@ -132,9 +132,11 @@ def rapor():
     nan_rows = np.isnan(pareto_array).any(axis=1)
     pareto_array = pareto_array[~nan_rows]
     profits = np.array([revenue_estimator(gecici_df, p, AUDIENCE_SIZE, int(t), B, b) for p, t, B, b in pareto_array])
-    pareto_df = pd.DataFrame({'P': (AUDIENCE_SIZE * pareto_array[:, 0]).astype(int), 'T': pareto_array[:, 1], 'B': np.around(pareto_array[:, 2], decimals=2), 'Bid': np.around(pareto_array[:, 3], decimals=2), 'Profit': np.around(profits, decimals=2)})
+    pareto_df = pd.DataFrame({'P': (AUDIENCE_SIZE * pareto_array[:, 0]).astype(int), 'T': pareto_array[:, 1], 'B': np.around(pareto_array[:, 2], decimals=2), 'Bid': np.around(pareto_array[:, 3], decimals=2), 'Profit': np.around(profits, decimals=2), 'ROI': np.around((profits / pareto_array[:, 2]), decimals=2)})
     pareto_df = pareto_df.dropna()
-    
+    print(pareto_df.idxmax())
+
+
     for spend, reach in zip(cum_ad_spend, exponential_effectiveness(cum_ad_spend, *popt)):
         df = df.append({'Verilen İhale Değeri': spend, 'Sonuç': AUDIENCE_SIZE * reach, 'Veri Kaynağı': 'Tahmin'}, ignore_index = True)
 
@@ -152,6 +154,7 @@ def rapor_platform():
     budgetJSON = ''
     graphJSON1 = ''
     graphJSON2 = ''
+    graphJSON3 = ''
     if request.method == 'POST' and request.form['Bütçe'] and request.form['Ironsource Gelir Çarpanı'] and request.form['Meta Gelir Çarpanı']:
         df1 = pd.read_pickle("./Meta.pickle") 
         
@@ -193,7 +196,7 @@ def rapor_platform():
         'names': ['Meta', 'Ironsource']
         }
 
-        df = pd.DataFrame(data))
+        df = pd.DataFrame(data)
         
         fig = px.pie(df, values='budget_allocated', names='names', title='Allocated budgets')
             
@@ -223,7 +226,7 @@ def rapor_kitle():
         return graphJSON
 
     def plot_pareto(df):
-        fig = px.line(df, x='B', y='T', color='P', markers=True, hover_data=['Bid Meta', 'Bid Ironsource', 'P Meta', 'P Ironsource'], title="B vs T vs P (Min B)")
+        fig = px.line(df, x='B', y='T', color='P', markers=True, hover_data=['Bid Meta', 'Bid Ironsource', 'P Meta', 'P Ironsource'], title="Farklı Bütçe, Uzunluk ve İndirme Sayıları için Kampanya Senaryoları")
         graphJSON = json.dumps(fig, cls=plotly.utils.PlotlyJSONEncoder)
         
         return graphJSON
@@ -301,8 +304,6 @@ def kampanya():
 
     if day == "1":
         df = pd.read_pickle('./df.pickle')
-
-        flash('Eski Günlük Bütçe: ' + "{:.2f}".format(bid))
          
         kampanya_df = pd.DataFrame(columns=['Day', 'B', 'T', 'Bid', 'P', 'M', 'U', 'Reach'])
         df2 = df.copy()
@@ -312,9 +313,7 @@ def kampanya():
         kampanya_df = kampanya_df.append(pd.DataFrame({'Day': int(day), 'B': float(b), 'T': int(t), 'Bid': float(bid), 'P': float(p) / AUDIENCE_SIZE, 'M': float(m), 'U':float(u), 'Reach':0},  index=[0]), ignore_index=True)
         kampanya_df.to_pickle("./kampanya_df.pickle")
 
-        flash('Kampanya Günü: ' + str(kampanya_df.iloc[-1]['T']))
         flash('Kalan Toplam Bütçe: ' + "{:.2f}".format(kampanya_df.iloc[-1]['B']))
-        flash('Sonuç: ' + str(kampanya_df.iloc[-1]['Reach'] * AUDIENCE_SIZE))
              
     kampanya_df = pd.read_pickle("./kampanya_df.pickle")
     
@@ -344,7 +343,7 @@ def kampanya():
         [m, u] = popt
 
         yeni_bid = new_bid(kampanya_df.iloc[-1]['P'], WORD_OF_MOUTH, m, u, kampanya_df.iloc[-1]['T'], kampanya_df.iloc[-1]['Reach'])
-        flash('Yeni günlük bütçe: ' + "{:.2f}".format(yeni_bid))
+        #flash('Yeni günlük bütçe: ' + "{:.2f}".format(yeni_bid))
         if yeni_bid < 0:
              flash('Amaca ulaşıldı!')
 
@@ -360,16 +359,19 @@ def kampanya():
 
         kampanya_df = kampanya_df.append(pd.DataFrame({'Day': kampanya_df.iloc[-1]['Day'] + 1, 'B': yeni_b, 'T':  kampanya_df.iloc[-1]['T']-1, 'Bid': yeni_bid, 'P':  kampanya_df.iloc[-1]['P'], 'M': m, 'U': u, 'Reach': kampanya_df.iloc[-1]['Reach'] + (sonuc / AUDIENCE_SIZE)}, index=[0]), ignore_index=True)        
         
-        flash('Kampanya Günü: ' + str(kampanya_df.iloc[-1]['T']))
         flash('Kalan Toplam Bütçe: ' + "{:.2f}".format(kampanya_df.iloc[-1]['B']))
-        flash('Sonuç: ' + str(kampanya_df.iloc[-1]['Reach'] * AUDIENCE_SIZE))
         
         kampanya_df.to_pickle("./kampanya_df.pickle")
+
+        print(kampanya_df)
         
     elif request.method == 'POST':
         flash('Lütfen formu doldurun')
 
-    return render_template('kampanya.html', yeni_bid=yeni_bid)
+    flash('Kalan hedef: ' + str(int((kampanya_df.iloc[-1]['P'] - kampanya_df.iloc[-1]['Reach']) * META_AUDIENCE_SIZE)))
+    table_data = [[i[1]['Day'], int(i[1]['Reach'] * META_AUDIENCE_SIZE), round(i[1]['Bid'], 2)] for i in kampanya_df.tail(kampanya_df.iloc[-1]['Day']).iterrows()]
+
+    return render_template('kampanya.html', yeni_bid=yeni_bid, table_data=table_data)
 
 @app.route('/kampanya_platform.html', methods =['GET', 'POST'])
 def kampanya_platform():
@@ -463,6 +465,6 @@ def kampanya_kitle():
     return render_template('kampanya_kitle.html', kitle1_bid=new_bids[0], kitle2_bid=new_bids[1])
     
 if __name__ == "__main__":
-    app.run()
+    app.run(debug=True)
     
     
