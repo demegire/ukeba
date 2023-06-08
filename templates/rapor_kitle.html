@@ -35,8 +35,8 @@
 	chart2.on('plotly_click', function(data){
 		const bid_meta = data.points[0].customdata[0];
 		const bid_iron = data.points[0].customdata[1];
-		const p_iron = data.points[0].customdata[2];
-		const p_meta = data.points[0].customdata[3];
+		const p_iron = data.points[0].customdata[3];
+		const p_meta = data.points[0].customdata[2];
 		const p = data.points[0].data.legendgroup;
 		const b = data.points[0].x;
 		const t = data.points[0].y;

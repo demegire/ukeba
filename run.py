@@ -107,7 +107,7 @@ def rapor():
         return graphJSON
     
     def plot_pareto(df):
-        fig = px.line(df, x='B', y='T', markers=True, color='P', hover_data=['Bid', 'Profit'], title="Farklı Bütçe, Uzunluk ve İndirme Sayıları için Kampanya Senaryoları")
+        fig = px.line(df, x='B', y='T', markers=True, color='P', hover_data=['Bid', 'Profit', 'ROI'], title="Farklı Bütçe, Uzunluk ve İndirme Sayıları için Kampanya Senaryoları")
         graphJSON = json.dumps(fig, cls=plotly.utils.PlotlyJSONEncoder)
         
         return graphJSON
@@ -134,7 +134,6 @@ def rapor():
     profits = np.array([revenue_estimator(gecici_df, p, AUDIENCE_SIZE, int(t), B, b) for p, t, B, b in pareto_array])
     pareto_df = pd.DataFrame({'P': (AUDIENCE_SIZE * pareto_array[:, 0]).astype(int), 'T': pareto_array[:, 1], 'B': np.around(pareto_array[:, 2], decimals=2), 'Bid': np.around(pareto_array[:, 3], decimals=2), 'Profit': np.around(profits, decimals=2), 'ROI': np.around((profits / pareto_array[:, 2]), decimals=2)})
     pareto_df = pareto_df.dropna()
-    print(pareto_df.idxmax())
 
 
     for spend, reach in zip(cum_ad_spend, exponential_effectiveness(cum_ad_spend, *popt)):
@@ -147,7 +146,7 @@ def rapor():
     graphJSON = plot_px(df)
     graphJSON2 = plot_pareto(pareto_df)    
 
-    return render_template('rapor.html', graphJSON=graphJSON, graphJSON2=graphJSON2, m=m, u=u, kitle='Etkililik Fonksiyonu R^2 Değeri: ' + "{:.2f}".format(r2))
+    return render_template('rapor.html', graphJSON=graphJSON, graphJSON2=graphJSON2, m=m, u=u, kitle='Etkililik Fonksiyonu R^2 Değeri: ' + "{:.2f}".format(r2), roi="Yatırım Getirisi En Yüksek Kampanya: T={} B={:.2f} P={} ROI={:.2f}".format(pareto_df.iloc[pareto_df.idxmax()['ROI']]['T'], pareto_df.iloc[pareto_df.idxmax()['ROI']]['B'], pareto_df.iloc[pareto_df.idxmax()['ROI']]['P'], pareto_df.iloc[pareto_df.idxmax()['ROI']]['ROI']))
 
 @app.route('/rapor_platform.html', methods =['GET', 'POST'])
 def rapor_platform():
@@ -189,7 +188,7 @@ def rapor_platform():
         p1, p2, h1, h2, ltv1, ltv2, B1, B2, ltv_total = ltv_results
         
         data = {
-        'budget_allocated': [B1, B2],
+        'budget_allocated': [round(B1, 2), round(B2, 2)],
         'exposure_percentage': [p1, p2],
         'exposed_population': [h1, h2],
         'ltvs': [ltv1, ltv2],
@@ -362,8 +361,6 @@ def kampanya():
         flash('Kalan Toplam Bütçe: ' + "{:.2f}".format(kampanya_df.iloc[-1]['B']))
         
         kampanya_df.to_pickle("./kampanya_df.pickle")
-
-        print(kampanya_df)
         
     elif request.method == 'POST':
         flash('Lütfen formu doldurun')
@@ -395,23 +392,21 @@ def kampanya_kitle():
     p_dict = {'Kitle1': p_kitle1, 'Kitle2': p_kitle2}
     file_dict = {'Kitle1': 'Meta', 'Kitle2': 'Ironsource'}
 
+    table_data = ''
+
     if day == "1":
         m = m.split(',')
         u = u.split(',')
         for idx, i in enumerate(audiences):
             df = pd.read_pickle('./{}.pickle'.format(file_dict[i]))
-            flash('{} Eski Günlük Bütçe: '.format(i) + str(bid_dict[i]))
             
             kampanya_df = pd.DataFrame(columns=['Day', 'B', 'T', 'Bid', 'P', 'M', 'U', 'Reach'])
             df2 = df.copy()
             for r in range(len(df)):
-                new_entry = pd.DataFrame({'Date': df2['Date'].iloc[r], 'Day': 0, 'B': 0, 'T': 0, 'Bid': df2['Cost'].iloc[r], 'P': 0, 'M': 0, 'U': 0, 'Reach':  df2['Install'].iloc[r] / audience_dict[i]}, index=[0])            
+                new_entry = pd.DataFrame({'Date': df2['Date'].iloc[r], 'Day': 0, 'B': 0, 'T': 0, 'Bid': df2['Cost'].iloc[r], 'P': 0.0, 'M': 0, 'U': 0, 'Reach':  df2['Install'].iloc[r] / audience_dict[i]}, index=[0])            
                 kampanya_df = kampanya_df.append(new_entry, ignore_index=True)
             kampanya_df = kampanya_df.append(pd.DataFrame({'Day': int(day), 'B': float(b), 'T': int(t), 'Bid': float(bid_dict[i]), 'P': float(p_dict[i]), 'M': float(m[idx]), 'U':float(u[idx]), 'Reach':0},  index=[0]), ignore_index=True)
             kampanya_df.to_pickle("./kampanya_{}.pickle".format(i))
-
-        flash('Kampanya Günü: ' + str(kampanya_df.iloc[-1]['T']))
-        flash('Kalan Toplam Bütçe: ' + str(kampanya_df.iloc[-1]['B']))
 
     campaign_dfs = [pd.read_pickle("./kampanya_{}.pickle".format(i)) for i in audiences]
     new_bids = [0, 0]
@@ -450,19 +445,18 @@ def kampanya_kitle():
             [m, u] = popt
 
             new_bids[idx] = new_bid(campaign_dfs[idx].iloc[-1]['P'], WORD_OF_MOUTH, m, u, campaign_dfs[idx].iloc[-1]['T'], campaign_dfs[idx].iloc[-1]['Reach'])
-            flash('{} Yeni bid: '.format(audiences[idx]) + "{:.2f}".format(new_bids[idx]))
 
             campaign_dfs[idx] = campaign_dfs[idx].append(pd.DataFrame({'Day': campaign_dfs[idx].iloc[-1]['Day'] + 1, 'B': new_budget, 'T':  campaign_dfs[idx].iloc[-1]['T']-1, 'Bid': new_bids[idx], 'P':  campaign_dfs[idx].iloc[-1]['P'], 'M': m, 'U': u, 'Reach': campaign_dfs[idx].iloc[-1]['Reach'] + (results[idx] / audience_dict[audiences[idx]])}, index=[0]), ignore_index=True)        
             campaign_dfs[idx].to_pickle("./kampanya_{}.pickle".format(audiences[idx]))
-            print(campaign_dfs[idx])
-        flash('Kampanya Günü: ' + str(campaign_dfs[0].iloc[-1]['T']))
         flash('Kalan Toplam Bütçe: ' + "{:.2f}".format(campaign_dfs[0].iloc[-1]['B']))
-        #flash('Sonuç: ' + str(sum(df.iloc[-1]['Reach'] * AUDIENCE_SIZE))
-        
+        flash('Kalan hedef: ' + str(int((campaign_dfs[0].iloc[-1]['P'] * META_AUDIENCE_SIZE + campaign_dfs[1].iloc[-1]['P'] * IRONSOURCE_AUDIENCE_SIZE - campaign_dfs[0].iloc[-1]['Reach'] * META_AUDIENCE_SIZE - campaign_dfs[1].iloc[-1]['Reach'] * IRONSOURCE_AUDIENCE_SIZE))))
+        table_data = [[i[1]['Day'], int(i[1]['Reach'] * META_AUDIENCE_SIZE), round(i[1]['Bid'], 2), int(j[1]['Reach'] * IRONSOURCE_AUDIENCE_SIZE), round(j[1]['Bid'], 2)] for i, j in zip(campaign_dfs[0].tail(campaign_dfs[0].iloc[-1]['Day']).iterrows(), campaign_dfs[1].tail(campaign_dfs[1].iloc[-1]['Day']).iterrows())]
+
+
     elif request.method == 'POST':
         flash('Lütfen formu doldurun')
 
-    return render_template('kampanya_kitle.html', kitle1_bid=new_bids[0], kitle2_bid=new_bids[1])
+    return render_template('kampanya_kitle.html', kitle1_bid=new_bids[0], kitle2_bid=new_bids[1], table_data=table_data)
     
 if __name__ == "__main__":
     app.run(debug=True)
