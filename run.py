@@ -3,12 +3,10 @@ from pandas.core.common import SettingWithCopyWarning
 warnings.simplefilter(action='ignore', category=FutureWarning)
 warnings.simplefilter(action="ignore", category=SettingWithCopyWarning)
 
-from flask import Flask, flash, render_template, request, redirect, url_for
-from flask_ngrok import run_with_ngrok
+from flask import Flask, flash, render_template, request, redirect
 from utils import exponential_effectiveness, new_bid, pareto_frontier_B_b, maximize_ltv1ltv2_sum, revenue_estimator
 from multi import multi_pareto_frontier_B_b
 from werkzeug.utils import secure_filename
-from matplotlib.figure import Figure
 from scipy.optimize import curve_fit
 import pandas as pd
 import numpy as np
@@ -18,7 +16,7 @@ import os
 import plotly
 import plotly.express as px
 
-from constants import WORD_OF_MOUTH, INITIAL_EXPOSURE, ONLINE_LEARNING_N, AUDIENCE_SIZE, DECAY_RATE, P0, META_AUDIENCE_SIZE, IRONSOURCE_AUDIENCE_SIZE, IRONSOURCE_LTV, META_LTV
+from constants import WORD_OF_MOUTH, INITIAL_EXPOSURE, AUDIENCE_SIZE, DECAY_RATE, P0, META_AUDIENCE_SIZE, IRONSOURCE_AUDIENCE_SIZE
 
 UPLOAD_FOLDER = 'uploads'
 ALLOWED_EXTENSIONS = {'csv', 'pdf', 'xlsx'}
@@ -26,7 +24,6 @@ ALLOWED_EXTENSIONS = {'csv', 'pdf', 'xlsx'}
 app = Flask(__name__)
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app.secret_key = "super secret key"
-#run_with_ngrok(app)
 
 def allowed_file(filename):
     return '.' in filename and \
